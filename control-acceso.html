@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Control de acceso — Salón de eventos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root{
+  --ink:#121319; --panel:#1b1d27; --panel2:#242732;
+  --brass:#c9a227; --brassSoft:#e3c568; --cream:#f3ead9;
+  --green:#3fa34d; --greenSoft:#173622;
+  --red:#d0483f; --redSoft:#3a1f1d;
+  --dim:#9aa0ad; --dim2:#6a707d;
+}
+*{ box-sizing: border-box; }
+html,body{ margin:0; padding:0; background:var(--ink); }
+body{
+  color: var(--cream);
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+h2{ font-family:'Oswald',sans-serif; font-weight:500; letter-spacing:.03em; font-size:22px; margin:0; }
+input, select{
+  background: var(--panel2);
+  border: 1px solid #383c4a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--cream);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+}
+input::placeholder{ color: var(--dim2); }
+input:focus, select:focus{ border-color: var(--brass) !important; }
+label.field{ display:flex; flex-direction:column; gap:6px; }
+.fieldLabel{ font-size:11px; letter-spacing:.06em; color:var(--dim2); text-transform:uppercase; }
+
+button{ font-family:'Inter',sans-serif; cursor:pointer; }
+.brassBtn{
+  background: var(--brass); color: var(--ink); border:none; border-radius:8px;
+  padding:10px 18px; font-family:'Oswald',sans-serif; letter-spacing:.05em;
+  font-weight:600; font-size:13px;
+}
+.brassBtn:hover{ background: var(--brassSoft); }
+.smallBtn{
+  background: transparent; border:1px solid #383c4a; color: var(--cream);
+  border-radius:7px; padding:6px 12px; font-size:12.5px;
+}
+.smallBtn:hover{ border-color: var(--brass); }
+.ghostBtn{ background:transparent; border:none; color:var(--dim2); cursor:pointer; font-size:13px; }
+.ghostBtn:hover{ color: var(--red); }
+
+header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px 24px; border-bottom:1px solid #2a2d38; flex-wrap:wrap; gap:14px;
+}
+.logo{ display:flex; align-items:center; gap:12px; }
+.logoMark{ font-size:22px; color:var(--brass); }
+.logoTitle{ font-family:'Oswald',sans-serif; letter-spacing:.12em; font-size:16px; font-weight:600; }
+.logoSub{ font-size:12px; color:var(--dim); letter-spacing:.04em; }
+nav{ display:flex; gap:8px; }
+.navBtn{
+  background:transparent; border:1px solid #33374a; color:var(--dim);
+  padding:9px 18px; border-radius:999px; font-family:'Oswald',sans-serif;
+  letter-spacing:.08em; font-size:13px;
+}
+.navBtn:hover{ color:var(--cream); }
+.navBtn.active{ background:var(--brass); border-color:var(--brass); color:var(--ink); font-weight:600; }
+
+main{ max-width:920px; margin:0 auto; padding:28px 24px; }
+.sectionHead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+.card{ background:var(--panel); border:1px solid #2a2d38; border-radius:14px; padding:20px; }
+.formGrid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.errorText{ color:#ff8b7d; font-size:13px; margin-top:12px; }
+.empty{ text-align:center; color:var(--dim); border:1px dashed #33374a; border-radius:14px; padding:36px 20px; line-height:1.6; }
+
+.eventGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin-top:16px; }
+.eventCard{
+  position:relative; background:var(--panel); border:1px solid #2a2d38; border-radius:12px;
+  padding:16px 16px 14px; cursor:pointer; border-left:3px solid #33374a;
+}
+.eventCard:hover{ border-color:#454a5c; }
+.eventCard.active{ border-left:3px solid var(--brass); background:var(--panel2); }
+.eventCardDate{ font-size:11px; letter-spacing:.08em; color:var(--brassSoft); text-transform:uppercase; font-family:'JetBrains Mono',monospace; }
+.eventCardName{ font-family:'Oswald',sans-serif; font-size:17px; margin:6px 0 4px; }
+.eventCardMeta{ font-size:12.5px; color:var(--dim); }
+.eventDelete{ position:absolute; top:10px; right:10px; }
+
+.tableWrap{ border:1px solid #2a2d38; border-radius:12px; overflow:hidden; }
+.tableHeadRow, .tableRow{ display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:10px; align-items:center; padding:12px 16px; }
+.tableHeadRow{ background:var(--panel2); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--dim2); padding:10px 16px; }
+.tableRow{ border-top:1px solid #24262f; }
+.resultName{ font-size:14.5px; }
+.resultMeta{ font-size:12px; color:var(--dim2); font-family:'JetBrains Mono',monospace; }
+.codeText{ font-family:'JetBrains Mono',monospace; color:var(--brassSoft); font-size:14px; }
+.chip{ display:inline-block; padding:5px 10px; border-radius:999px; font-size:11.5px; letter-spacing:.03em; width:fit-content; cursor:pointer; }
+.chipIn{ background:var(--greenSoft); color:#7fd894; }
+.chipPending{ background:#2c2f3a; color:var(--dim); }
+.rowActions{ display:flex; gap:8px; justify-content:flex-end; }
+
+.resultsList{ margin-top:12px; display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto; }
+.noResult{ color:var(--dim2); font-size:13.5px; padding:10px 4px; }
+.resultRow{
+  display:flex; align-items:center; justify-content:space-between; background:var(--panel2);
+  border:1px solid #2f323f; border-radius:10px; padding:12px 14px; cursor:pointer;
+}
+.resultRow:hover{ border-color:var(--brass); }
+
+.stampPanel{ margin-top:20px; text-align:center; background:var(--panel); border:1px solid #2a2d38; border-radius:14px; padding:32px 20px; }
+.stampMark{
+  display:inline-block; font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:.12em;
+  font-size:26px; border:4px solid; border-radius:10px; padding:10px 26px; transform:rotate(-4deg);
+  animation: stampSlam .35s ease-out;
+}
+@keyframes stampSlam{
+  0%{ transform:scale(2.4) rotate(-4deg); opacity:0; }
+  60%{ transform:scale(.92) rotate(-4deg); opacity:1; }
+  100%{ transform:scale(1) rotate(-4deg); opacity:1; }
+}
+.stampName{ margin-top:14px; font-size:16px; }
+
+.modalBg{ position:fixed; inset:0; background:rgba(8,9,13,0.72); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
+.modalWrap{ display:flex; flex-direction:column; align-items:center; gap:18px; max-width:420px; width:100%; }
+.ticket{ display:flex; width:100%; background:var(--cream); color:var(--ink); border-radius:14px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,.45); }
+.ticketMain{ flex:1; padding:22px 20px; }
+.ticketEyebrow{ font-size:10.5px; letter-spacing:.14em; color:#a3833f; font-family:'Oswald',sans-serif; }
+.ticketEvent{ font-family:'Oswald',sans-serif; font-size:20px; margin-top:6px; line-height:1.2; }
+.ticketMeta{ font-size:12.5px; color:#5a5240; margin-top:3px; }
+.ticketGuestLabel{ font-size:10.5px; letter-spacing:.1em; color:#a3833f; text-transform:uppercase; margin-top:16px; }
+.ticketGuestName{ font-size:16px; margin-top:2px; }
+.ticketQrWrap{ display:flex; justify-content:center; margin-top:14px; }
+.ticketQrWrap img, .ticketQrWrap canvas{ border-radius:6px; }
+.ticketPerf{ width:0; border-left:2px dashed #cbbfa0; background-image:radial-gradient(circle, var(--ink) 4px, transparent 4.5px); background-size:18px 18px; background-position:center; }
+.ticketStub{ width:92px; background:#e9dfc6; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:14px 6px; }
+.stubLabel{ font-size:9.5px; letter-spacing:.12em; color:#8a7842; }
+.stubCode{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; writing-mode:vertical-rl; letter-spacing:.08em; }
+.modalActions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+.waBtn{ background:#25D366; color:#0c1f13; font-weight:700; padding:10px 18px; border-radius:8px; font-size:13.5px; text-decoration:none; }
+.waBtn:hover{ filter:brightness(1.08); }
+
+.scanBtn{
+  display:inline-flex; align-items:center; gap:8px;
+  background: var(--panel2); border:1px solid var(--brass); color: var(--brassSoft);
+  border-radius:8px; padding:10px 16px; font-size:13.5px; font-weight:600;
+}
+.scanBtn:hover{ background:#2b2f3d; }
+.scannerOverlay{ position:fixed; inset:0; background:rgba(8,9,13,0.92); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:60; padding:20px; gap:16px; }
+.scannerBox{ width:min(320px,90vw); border-radius:16px; overflow:hidden; border:2px solid var(--brass); background:#000; }
+.scannerHint{ color:var(--dim); font-size:13.5px; text-align:center; max-width:320px; }
+.scannerError{ color:#ff8b7d; font-size:13.5px; text-align:center; max-width:320px; }
+
+.dim{ color: var(--dim); }
+::-webkit-scrollbar{ width:8px; } ::-webkit-scrollbar-thumb{ background:#33374a; border-radius:8px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ================= utilidades ================= */
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function genCode(){
+  let s = "";
+  for (let i = 0; i < 6; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  return s;
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function digitsOnly(s){ return (s || "").replace(/\D/g, ""); }
+function esc(s){
+  return (s == null ? "" : String(s)).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+function formatDateLabel(dateStr){
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  if (parts.length !== 3) return esc(dateStr);
+  const [y, m, d] = parts;
+  if (!y || !m || !d || isNaN(+m)) return esc(dateStr);
+  return `${parseInt(d,10)} ${meses[parseInt(m,10)-1] || ""} ${y}`;
+}
+
+/* ================= storage ================= */
+async function loadEvents(){
+  try { const r = await window.storage.get("events", true); return r ? JSON.parse(r.value) : []; }
+  catch { return []; }
+}
+async function saveEvents(list){
+  try { await window.storage.set("events", JSON.stringify(list), true); }
+  catch (e) { console.error("No se pudo guardar eventos", e); }
+}
+async function loadGuests(eventId){
+  try { const r = await window.storage.get("guests:" + eventId, true); return r ? JSON.parse(r.value) : []; }
+  catch { return []; }
+}
+async function saveGuestsList(eventId, list){
+  try { await window.storage.set("guests:" + eventId, JSON.stringify(list), true); }
+  catch (e) { console.error("No se pudo guardar invitados", e); }
+}
+
+/* ================= estado global ================= */
+const state = {
+  tab: "events",
+  events: [],
+  eventsLoaded: false,
+  guestsCache: {},
+  selectedEventId: null,
+  showEventForm: false,
+  eventError: "",
+  guestError: "",
+  ticketGuest: null,      // { guest, event }
+  checkinEventId: null,
+  query: "",
+  stamp: null,            // { type: 'ok'|'dup'|'notfound', guest, code }
+  scannerOpen: false,
+  scanError: "",
+  busy: false,
+};
+
+let html5QrCode = null; // instancia activa del escáner
+
+/* ================= helpers de datos ================= */
+async function ensureGuests(eventId){
+  if (state.guestsCache[eventId]) return state.guestsCache[eventId];
+  const g = await loadGuests(eventId);
+  state.guestsCache[eventId] = g;
+  return g;
+}
+
+function buildWhatsAppLink(guest, event){
+  const msg =
+    `🎟️ INVITACIÓN — ${event.name}\n` +
+    `Fecha: ${formatDateLabel(event.date)}${event.time ? " · " + event.time : ""}\n` +
+    (event.location ? `Lugar: ${event.location}\n` : "") +
+    `Invitado/a: ${guest.name}\n` +
+    `Código de acceso: ${guest.code}\n\n` +
+    `Presentá este código (o el QR) en el ingreso.`;
+  const phone = digitsOnly(guest.phone);
+  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+}
+function qrPayload(guest, event){
+  return JSON.stringify({ a: "acceso", e: event.id, c: guest.code });
+}
+
+/* ================= acciones ================= */
+async function createEvent(data){
+  state.eventError = "";
+  if (!data.name.trim()) { state.eventError = "Falta el nombre del evento."; render(); return; }
+  if (!data.date.trim()) { state.eventError = "Falta la fecha del evento."; render(); return; }
+  const ev = { id: uid(), name: data.name.trim(), date: data.date.trim(), time: data.time.trim(), location: data.location.trim(), createdAt: Date.now() };
+  const list = [...state.events, ev].sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+  state.events = list;
+  await saveEvents(list);
+  state.showEventForm = false;
+  state.selectedEventId = ev.id;
+  await ensureGuests(ev.id);
+  render();
+}
+
+async function deleteEvent(id){
+  state.events = state.events.filter(e => e.id !== id);
+  await saveEvents(state.events);
+  if (state.selectedEventId === id) state.selectedEventId = null;
+  render();
+}
+
+async function addGuest(data){
+  state.guestError = "";
+  if (!data.name.trim()) { state.guestError = "Falta el nombre del invitado."; render(); return; }
+  if (!state.selectedEventId) { state.guestError = "Seleccioná primero un evento."; render(); return; }
+  const guest = { id: uid(), name: data.name.trim(), phone: data.phone.trim(), code: genCode(), checkedIn: false, checkedInAt: null };
+  const list = [...(state.guestsCache[state.selectedEventId] || []), guest];
+  state.guestsCache[state.selectedEventId] = list;
+  await saveGuestsList(state.selectedEventId, list);
+  render();
+}
+
+async function deleteGuest(eventId, guestId){
+  const list = (state.guestsCache[eventId] || []).filter(g => g.id !== guestId);
+  state.guestsCache[eventId] = list;
+  await saveGuestsList(eventId, list);
+  render();
+}
+
+async function setGuestCheckedIn(eventId, guestId, value){
+  const list = (state.guestsCache[eventId] || []).map(g =>
+    g.id === guestId ? { ...g, checkedIn: value, checkedInAt: value ? Date.now() : null } : g
+  );
+  state.guestsCache[eventId] = list;
+  await saveGuestsList(eventId, list);
+  return list.find(g => g.id === guestId);
+}
+
+async function confirmCheckIn(guest){
+  if (state.busy) return;
+  state.busy = true;
+  if (guest.checkedIn) {
+    state.stamp = { type: "dup", guest };
+  } else {
+    const updated = await setGuestCheckedIn(state.checkinEventId, guest.id, true);
+    state.stamp = { type: "ok", guest: updated };
+  }
+  state.busy = false;
+  render();
+}
+
+async function handleScanText(decodedText){
+  stopScanner();
+  state.scannerOpen = false;
+  let eventId = null, code = null;
+  try {
+    const data = JSON.parse(decodedText);
+    if (data && data.a === "acceso") { eventId = data.e; code = data.c; }
+  } catch {}
+  if (!code) code = (decodedText || "").trim();
+
+  if (!state.checkinEventId) {
+    state.scanError = "Elegí un evento antes de escanear.";
+    render();
+    return;
+  }
+  if (eventId && eventId !== state.checkinEventId) {
+    state.stamp = { type: "wrongevent" };
+    render();
+    return;
+  }
+  const guests = state.guestsCache[state.checkinEventId] || [];
+  const guest = guests.find(g => g.code.toUpperCase() === code.toUpperCase());
+  if (!guest) {
+    state.stamp = { type: "notfound", code };
+    render();
+    return;
+  }
+  await confirmCheckIn(guest);
+}
+
+/* ================= escáner de cámara ================= */
+async function startScanner(){
+  state.scanError = "";
+  state.scannerOpen = true;
+  render();
+  // el div #qr-reader recién existe después del render de arriba
+  setTimeout(async () => {
+    try {
+      html5QrCode = new Html5Qrcode("qr-reader");
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 240 },
+        (decodedText) => { handleScanText(decodedText); },
+        () => { /* frame sin QR, se ignora */ }
+      );
+    } catch (err) {
+      console.error(err);
+      state.scanError = "No se pudo acceder a la cámara. Revisá los permisos del navegador, o usá la búsqueda manual.";
+      render();
+    }
+  }, 50);
+}
+async function stopScanner(){
+  if (html5QrCode) {
+    try { await html5QrCode.stop(); await html5QrCode.clear(); } catch {}
+    html5QrCode = null;
+  }
+}
+async function closeScanner(){
+  await stopScanner();
+  state.scannerOpen = false;
+  render();
+}
+
+/* ================= render ================= */
+const root = document.getElementById("root");
+
+function render(){
+  root.innerHTML = renderHeader() + renderMain() + renderTicketModal() + renderScannerOverlay();
+  // efectos posteriores al render que necesitan tocar el DOM real
+  renderTicketQrCanvas();
+}
+
+function renderHeader(){
+  return `
+  <header>
+    <div class="logo">
+      <span class="logoMark">◈</span>
+      <div>
+        <div class="logoTitle">CONTROL DE ACCESO</div>
+        <div class="logoSub">Salón de eventos</div>
+      </div>
+    </div>
+    <nav>
+      <button class="navBtn ${state.tab === "events" ? "active" : ""}" data-action="set-tab" data-value="events">Eventos</button>
+      <button class="navBtn ${state.tab === "checkin" ? "active" : ""}" data-action="set-tab" data-value="checkin">Ingreso</button>
+    </nav>
+  </header>`;
+}
+
+function renderMain(){
+  return `<main>${ state.tab === "events" ? renderEventsTab() : renderCheckinTab() }</main>`;
+}
+
+function renderEventsTab(){
+  const selectedEvent = state.events.find(e => e.id === state.selectedEventId) || null;
+  return `
+  <section>
+    <div class="sectionHead">
+      <h2>Eventos <span style="font-size:13px;color:var(--dim2);font-weight:400;">(${state.events.length})</span></h2>
+      <button class="brassBtn" data-action="toggle-event-form">${state.showEventForm ? "Cancelar" : "+ Nuevo evento"}</button>
+    </div>
+
+    ${state.showEventForm ? `
+    <form class="card" id="event-form" style="margin-bottom:18px;">
+      <div class="formGrid">
+        <label class="field">
+          <span class="fieldLabel">Nombre del evento</span>
+          <input id="ev-name" placeholder="Casamiento Aylén &amp; Nico" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span class="fieldLabel">Fecha (AAAA-MM-DD)</span>
+          <input id="ev-date" placeholder="2026-09-20" inputmode="numeric" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span class="fieldLabel">Hora (HH:MM)</span>
+          <input id="ev-time" placeholder="20:30" inputmode="numeric" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span class="fieldLabel">Salón / lugar</span>
+          <input id="ev-location" placeholder="Salón Terrazas, Merlo" autocomplete="off" />
+        </label>
+      </div>
+      ${state.eventError ? `<div class="errorText">${esc(state.eventError)}</div>` : ""}
+      <button type="submit" class="brassBtn" style="margin-top:14px;">Crear evento</button>
+    </form>` : ""}
+
+    ${!state.eventsLoaded ? `<p class="dim">Cargando eventos…</p>` : ""}
+
+    ${state.eventsLoaded && state.events.length === 0 && !state.showEventForm ? `
+    <div class="empty">
+      <div style="font-size:28px;margin-bottom:8px;">◈</div>
+      Todavía no creaste ningún evento.<br/>Creá el primero para empezar a armar la lista de invitados.
+    </div>` : ""}
+
+    <div class="eventGrid">
+      ${state.events.map(ev => `
+        <div class="eventCard ${state.selectedEventId === ev.id ? "active" : ""}" data-action="select-event" data-id="${ev.id}">
+          <div class="eventCardDate">${formatDateLabel(ev.date)}</div>
+          <div class="eventCardName">${esc(ev.name)}</div>
+          <div class="eventCardMeta">${ev.time ? esc(ev.time) + " hs" : ""}${ev.location ? " · " + esc(ev.location) : ""}</div>
+          <button class="ghostBtn eventDelete" data-action="delete-event" data-id="${ev.id}" title="Eliminar evento">✕</button>
+        </div>
+      `).join("")}
+    </div>
+  </section>
+
+  ${selectedEvent ? renderGuestsSection(selectedEvent) : ""}
+  `;
+}
+
+function renderGuestsSection(event){
+  const guests = state.guestsCache[event.id] || [];
+  return `
+  <section style="margin-top:36px;">
+    <div class="sectionHead">
+      <h2>Invitados <span style="font-size:13px;color:var(--dim2);font-weight:400;">(${guests.length})</span> — <span style="color:var(--brassSoft);">${esc(event.name)}</span></h2>
+    </div>
+
+    <form class="card" id="guest-form" style="margin-bottom:18px;">
+      <div class="formGrid" style="grid-template-columns:2fr 2fr auto;">
+        <label class="field">
+          <span class="fieldLabel">Nombre y apellido</span>
+          <input id="g-name" placeholder="Juan Pérez" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span class="fieldLabel">WhatsApp (con código de país)</span>
+          <input id="g-phone" placeholder="5492611234567" autocomplete="off" />
+        </label>
+        <div style="display:flex;align-items:flex-end;">
+          <button type="submit" class="brassBtn">+ Agregar</button>
+        </div>
+      </div>
+      ${state.guestError ? `<div class="errorText">${esc(state.guestError)}</div>` : ""}
+    </form>
+
+    ${guests.length === 0 ? `<div class="empty">Todavía no hay invitados cargados para este evento.</div>` : `
+    <div class="tableWrap">
+      <div class="tableHeadRow"><span>Invitado</span><span>Código</span><span>Estado</span><span></span></div>
+      ${guests.map(g => `
+        <div class="tableRow">
+          <div>
+            <div class="resultName">${esc(g.name)}</div>
+            ${g.phone ? `<div class="resultMeta">${esc(g.phone)}</div>` : ""}
+          </div>
+          <div class="codeText">${esc(g.code)}</div>
+          <div class="chip ${g.checkedIn ? "chipIn" : "chipPending"}" data-action="toggle-guest" data-event="${event.id}" data-id="${g.id}" data-value="${g.checkedIn ? "0" : "1"}" title="Click para cambiar estado">${g.checkedIn ? "Ingresó" : "Pendiente"}</div>
+          <div class="rowActions">
+            <button type="button" class="smallBtn" data-action="open-ticket" data-event="${event.id}" data-id="${g.id}">Ticket</button>
+            <button type="button" class="ghostBtn" data-action="delete-guest" data-event="${event.id}" data-id="${g.id}">✕</button>
+          </div>
+        </div>
+      `).join("")}
+    </div>`}
+  </section>`;
+}
+
+function renderCheckinTab(){
+  const checkinEvent = state.events.find(e => e.id === state.checkinEventId) || null;
+  return `
+  <div class="card">
+    <label class="field">
+      <span class="fieldLabel">Evento</span>
+      <select id="checkin-event-select">
+        <option value="">Seleccioná un evento…</option>
+        ${state.events.map(ev => `<option value="${ev.id}" ${state.checkinEventId === ev.id ? "selected" : ""}>${esc(ev.name)} — ${formatDateLabel(ev.date)}</option>`).join("")}
+      </select>
+    </label>
+  </div>
+
+  ${checkinEvent ? `
+  <div class="card" style="margin-top:14px;">
+    <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      <label class="field" style="flex:1; min-width:220px;">
+        <span class="fieldLabel">Buscar por nombre, teléfono o código</span>
+        <input id="checkin-search" style="font-size:18px;" placeholder="Ej: Juan / 8K4P9X" value="${esc(state.query)}" autocomplete="off" />
+      </label>
+      <button type="button" class="scanBtn" data-action="open-scanner">📷 Escanear QR</button>
+    </div>
+
+    <div class="dim" style="margin-top:6px; font-size:12px; color:var(--dim2);">
+      ${(state.guestsCache[checkinEvent.id]||[]).length} invitados en la lista · ${(state.guestsCache[checkinEvent.id]||[]).filter(g=>g.checkedIn).length} ya ingresaron
+    </div>
+
+    <div id="checkin-results">${renderCheckinResults(checkinEvent)}</div>
+  </div>
+
+  ${state.stamp ? renderStampPanel() : ""}
+  ` : ""}
+  `;
+}
+
+function renderCheckinResults(checkinEvent){
+  const q = state.query.trim().toLowerCase();
+  if (!q) return "";
+  const guests = state.guestsCache[checkinEvent.id] || [];
+  const filtered = guests.filter(g =>
+    g.name.toLowerCase().includes(q) ||
+    g.code.toLowerCase().includes(q) ||
+    digitsOnly(g.phone).includes(digitsOnly(q))
+  );
+  return `
+  <div class="resultsList">
+    ${filtered.length === 0 ? `<div class="noResult">No hay ningún invitado que coincida con "${esc(state.query)}".</div>` : ""}
+    ${filtered.map(g => `
+      <div class="resultRow" data-action="confirm-checkin" data-id="${g.id}">
+        <div>
+          <div class="resultName">${esc(g.name)}</div>
+          <div class="resultMeta">${esc(g.code)} ${g.phone ? "· " + esc(g.phone) : ""}</div>
+        </div>
+        <div class="chip ${g.checkedIn ? "chipIn" : "chipPending"}">${g.checkedIn ? "Ya ingresó" : "Confirmar"}</div>
+      </div>
+    `).join("")}
+  </div>`;
+}
+
+function renderStampPanel(){
+  const s = state.stamp;
+  if (s.type === "wrongevent") {
+    return `
+    <div class="stampPanel">
+      <div class="stampMark" style="border-color:var(--red); color:var(--red);">OTRO EVENTO</div>
+      <div class="stampName">Este código QR pertenece a otro evento.</div>
+      <button class="smallBtn" style="margin-top:14px;" data-action="close-stamp">Buscar otro invitado</button>
+    </div>`;
+  }
+  if (s.type === "notfound") {
+    return `
+    <div class="stampPanel">
+      <div class="stampMark" style="border-color:var(--red); color:var(--red);">NO ENCONTRADO</div>
+      <div class="stampName">Código "${esc(s.code)}" no está en la lista de este evento.</div>
+      <button class="smallBtn" style="margin-top:14px;" data-action="close-stamp">Buscar otro invitado</button>
+    </div>`;
+  }
+  const ok = s.type === "ok";
+  const guest = s.guest;
+  return `
+  <div class="stampPanel">
+    <div class="stampMark" style="border-color:${ok ? "var(--green)" : "var(--red)"}; color:${ok ? "var(--green)" : "var(--red)"};">${ok ? "ADMITIDO" : "YA INGRESÓ"}</div>
+    <div class="stampName">${esc(guest.name)}</div>
+    ${!ok ? `<div style="color:var(--dim); font-size:13px; margin-top:2px;">Este invitado ya había ingresado${guest.checkedInAt ? " a las " + new Date(guest.checkedInAt).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}) : ""}.</div>` : ""}
+    <button class="smallBtn" style="margin-top:14px;" data-action="close-stamp">Buscar otro invitado</button>
+  </div>`;
+}
+
+function renderTicketModal(){
+  if (!state.ticketGuest) return "";
+  const { guest, event } = state.ticketGuest;
+  const waLink = buildWhatsAppLink(guest, event);
+  return `
+  <div class="modalBg" data-action="close-ticket">
+    <div class="modalWrap" onclick="event.stopPropagation()">
+      <div class="ticket">
+        <div class="ticketMain">
+          <div class="ticketEyebrow">ENTRADA DIGITAL</div>
+          <div class="ticketEvent">${esc(event.name)}</div>
+          <div class="ticketMeta">${formatDateLabel(event.date)}${event.time ? " · " + esc(event.time) + " hs" : ""}</div>
+          ${event.location ? `<div class="ticketMeta">${esc(event.location)}</div>` : ""}
+          <div class="ticketGuestLabel">Invitado/a</div>
+          <div class="ticketGuestName">${esc(guest.name)}</div>
+          <div class="ticketQrWrap" id="ticket-qr"></div>
+        </div>
+        <div class="ticketPerf"></div>
+        <div class="ticketStub">
+          <div class="stubLabel">CÓDIGO</div>
+          <div class="stubCode">${esc(guest.code)}</div>
+        </div>
+      </div>
+      <div class="modalActions">
+        <a href="${waLink}" target="_blank" rel="noopener noreferrer" class="waBtn">Enviar por WhatsApp</a>
+        <button type="button" class="smallBtn" data-action="copy-code" data-code="${esc(guest.code)}">Copiar código</button>
+        <button type="button" class="smallBtn" data-action="close-ticket">Cerrar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderTicketQrCanvas(){
+  if (!state.ticketGuest) return;
+  const el = document.getElementById("ticket-qr");
+  if (!el || typeof QRCode === "undefined") return;
+  el.innerHTML = "";
+  try {
+    new QRCode(el, {
+      text: qrPayload(state.ticketGuest.guest, state.ticketGuest.event),
+      width: 132,
+      height: 132,
+      colorDark: "#121319",
+      colorLight: "#f3ead9",
+    });
+  } catch (e) { console.error("No se pudo generar el QR", e); }
+}
+
+function renderScannerOverlay(){
+  if (!state.scannerOpen) return "";
+  return `
+  <div class="scannerOverlay">
+    <div class="scannerBox"><div id="qr-reader" style="width:100%;"></div></div>
+    ${state.scanError ? `<div class="scannerError">${esc(state.scanError)}</div>` : `<div class="scannerHint">Apuntá la cámara al código QR de la entrada.</div>`}
+    <button type="button" class="smallBtn" data-action="close-scanner">Cancelar</button>
+  </div>`;
+}
+
+/* ================= eventos delegados ================= */
+root.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-action]");
+  if (!t) return;
+  const action = t.dataset.action;
+
+  if (action === "set-tab") { state.tab = t.dataset.value; state.stamp = null; render(); }
+  else if (action === "toggle-event-form") { state.showEventForm = !state.showEventForm; state.eventError = ""; render(); }
+  else if (action === "select-event") { state.selectedEventId = t.dataset.id; await ensureGuests(t.dataset.id); render(); }
+  else if (action === "delete-event") { await deleteEvent(t.dataset.id); }
+  else if (action === "toggle-guest") { await setGuestCheckedIn(t.dataset.event, t.dataset.id, t.dataset.value === "1"); render(); }
+  else if (action === "open-ticket") {
+    const event = state.events.find(ev => ev.id === t.dataset.event);
+    const guest = (state.guestsCache[t.dataset.event] || []).find(g => g.id === t.dataset.id);
+    if (event && guest) { state.ticketGuest = { guest, event }; render(); }
+  }
+  else if (action === "close-ticket") { state.ticketGuest = null; render(); }
+  else if (action === "delete-guest") { await deleteGuest(t.dataset.event, t.dataset.id); }
+  else if (action === "copy-code") {
+    navigator.clipboard?.writeText(t.dataset.code);
+    t.textContent = "Copiado ✓";
+    setTimeout(() => { t.textContent = "Copiar código"; }, 1500);
+  }
+  else if (action === "confirm-checkin") {
+    const guests = state.guestsCache[state.checkinEventId] || [];
+    const guest = guests.find(g => g.id === t.dataset.id);
+    if (guest) await confirmCheckIn(guest);
+  }
+  else if (action === "close-stamp") { state.stamp = null; render(); }
+  else if (action === "open-scanner") { state.stamp = null; await startScanner(); }
+  else if (action === "close-scanner") { await closeScanner(); }
+});
+
+root.addEventListener("submit", async (e) => {
+  if (e.target.id === "event-form") {
+    e.preventDefault();
+    await createEvent({
+      name: document.getElementById("ev-name").value,
+      date: document.getElementById("ev-date").value,
+      time: document.getElementById("ev-time").value,
+      location: document.getElementById("ev-location").value,
+    });
+  }
+  if (e.target.id === "guest-form") {
+    e.preventDefault();
+    await addGuest({
+      name: document.getElementById("g-name").value,
+      phone: document.getElementById("g-phone").value,
+    });
+  }
+});
+
+root.addEventListener("input", (e) => {
+  if (e.target.id === "checkin-search") {
+    state.query = e.target.value;
+    const checkinEvent = state.events.find(ev => ev.id === state.checkinEventId);
+    const resultsEl = document.getElementById("checkin-results");
+    if (resultsEl && checkinEvent) resultsEl.innerHTML = renderCheckinResults(checkinEvent);
+  }
+});
+
+root.addEventListener("change", async (e) => {
+  if (e.target.id === "checkin-event-select") {
+    state.checkinEventId = e.target.value || null;
+    state.query = "";
+    state.stamp = null;
+    if (state.checkinEventId) await ensureGuests(state.checkinEventId);
+    render();
+  }
+});
+
+/* ================= arranque ================= */
+(async function init(){
+  render();
+  state.events = await loadEvents();
+  state.eventsLoaded = true;
+  render();
+})();
+</script>
+</body>
+</html>
