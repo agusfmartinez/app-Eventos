@@ -1,0 +1,246 @@
+// Sistema de gestión de eventos y control de acceso
+// Modelo de datos — ver ANALISIS.md secciones 5 y 6.
+//
+// Convención: nombres en inglés en el código, tablas/columnas en snake_case,
+// UI en español.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum Role {
+  ADMIN // puede todo
+  ORGANIZER // administra eventos e invitados
+  DOOR // control de acceso: escanea y registra ingresos
+
+  @@map("role")
+}
+
+enum EventType {
+  WEDDING
+  BIRTHDAY
+  QUINCEANERA
+  CORPORATE
+  PRIVATE
+  OTHER
+
+  @@map("event_type")
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+
+  @@map("event_status")
+}
+
+enum InvitationStatus {
+  PENDING // creada, todavía no confirmada
+  ENABLED // puede ingresar
+  BLOCKED // no puede ingresar aunque el QR sea válido
+  CANCELLED
+
+  @@map("invitation_status")
+}
+
+// ============================================================
+// Personal del salón
+// ============================================================
+
+/// Las cuentas las crea un admin. No hay registro público.
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  role         Role     @default(DOOR)
+  /// false corta el acceso en el próximo request (ver lib/auth.ts)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdEvents Event[]      @relation("EventCreatedBy")
+  staffAt       EventStaff[]
+  checkIns      CheckIn[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+// ============================================================
+// Eventos
+// ============================================================
+
+model Event {
+  id   String    @id @default(uuid()) @db.Uuid
+  name String
+  type EventType @default(OTHER)
+
+  /// Fecha sin hora: el evento ocurre en una fecha del calendario local,
+  /// no en un instante UTC.
+  eventDate DateTime @map("event_date") @db.Date
+  /// "HH:MM" en hora local del salón. String a propósito: guardarlo como
+  /// timestamp arrastra zona horaria y rompe el historial.
+  startTime String?  @map("start_time")
+  endTime   String?  @map("end_time")
+
+  location String?
+  coverUrl String?     @map("cover_url")
+  notes    String?
+  status   EventStatus @default(DRAFT)
+
+  createdById String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdBy   User?        @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  guests      Guest[]
+  invitations Invitation[]
+  staff       EventStaff[]
+  checkIns    CheckIn[]
+
+  @@index([eventDate])
+  @@index([status])
+  @@map("events")
+}
+
+/// Qué operador puede escanear en qué evento. Base del rol DOOR.
+model EventStaff {
+  eventId      String   @map("event_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  /// ej. "Puerta 1" — queda registrado en cada check-in
+  stationLabel String?  @map("station_label")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([userId])
+  @@map("event_staff")
+}
+
+// ============================================================
+// Invitados e invitaciones
+// ============================================================
+
+model Guest {
+  id      String @id @default(uuid()) @db.Uuid
+  eventId String @map("event_id") @db.Uuid
+
+  firstName String  @map("first_name")
+  lastName  String  @map("last_name")
+  /// Solo dígitos, normalizado al guardar
+  phone     String?
+  email     String?
+  notes     String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  invitation Invitation?
+  checkIns   CheckIn[]
+
+  @@index([eventId, lastName, firstName])
+  @@index([eventId, phone])
+  @@map("guests")
+}
+
+/// Acá vive la verdad del control de acceso.
+///
+/// Los estados INGRESADO y PARCIALMENTE INGRESADO del brief NO se guardan:
+/// se derivan de enteredCount vs maxPeople. Guardarlos duplicaría estado.
+model Invitation {
+  id      String @id @default(uuid()) @db.Uuid
+  guestId String @unique @map("guest_id") @db.Uuid
+  /// Desnormalizado a propósito: el scanner filtra por evento en un solo índice
+  eventId String @map("event_id") @db.Uuid
+
+  /// Lo único que va dentro del QR. 22+ chars de crypto.randomBytes.
+  /// Nunca Math.random(), nunca IDs incrementales.
+  token     String @unique
+  /// 8 chars legibles (sin 0/O/1/I) para tipear a mano si el QR no se lee
+  shortCode String @map("short_code")
+
+  maxPeople Int @map("max_people")
+  /// Solo se modifica dentro de la transacción de check-in (ver lib/checkin.ts).
+  /// La migración agrega CHECK (entered_count <= max_people).
+  enteredCount Int @default(0) @map("entered_count")
+
+  status InvitationStatus @default(ENABLED)
+  /// Invalida el link público /i/:token
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  guest    Guest     @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  checkIns CheckIn[]
+
+  @@unique([eventId, shortCode])
+  @@index([eventId, status])
+  @@map("invitations")
+}
+
+// ============================================================
+// Registro de ingresos
+// ============================================================
+
+/// Libro mayor inmutable. Solo se inserta, nunca se edita ni se borra.
+/// SUM(peopleCount) por invitación debe coincidir con Invitation.enteredCount.
+model CheckIn {
+  id           String @id @default(uuid()) @db.Uuid
+  invitationId String @map("invitation_id") @db.Uuid
+  guestId      String @map("guest_id") @db.Uuid
+  eventId      String @map("event_id") @db.Uuid
+
+  peopleCount  Int     @map("people_count")
+  operatorId   String? @map("operator_id") @db.Uuid
+  stationLabel String? @map("station_label")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  invitation Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  guest      Guest      @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  event      Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  operator   User?      @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+
+  @@index([eventId, createdAt])
+  @@index([invitationId])
+  @@map("check_ins")
+}
+
+// ============================================================
+// Auditoría
+// ============================================================
+
+model AuditLog {
+  id       String  @id @default(uuid()) @db.Uuid
+  actorId  String? @map("actor_id") @db.Uuid
+  action   String
+  entity   String
+  entityId String? @map("entity_id")
+  payload  Json?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entity, entityId])
+  @@map("audit_log")
+}

@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/*
+ * Paleta fija, sin dark mode automático.
+ *
+ * El scanner usa color como señal semántica (verde = pasa, rojo = no pasa) y
+ * lo mira personal no técnico bajo luz variable. Que el sistema operativo del
+ * celular invierta los colores solo sirve para generar dudas en la puerta.
+ */
+
+:root {
+  --background: #f7f7f8;
+  --surface: #ffffff;
+  --foreground: #17171a;
+  --muted: #6b6b76;
+  --border: #e3e3e8;
+
+  --brand: #6d28d9;
+  --brand-foreground: #ffffff;
+
+  /* Semánticos del control de acceso — punto 16 del brief */
+  --ok: #15803d;
+  --ok-surface: #dcfce7;
+  --warn: #b45309;
+  --warn-surface: #fef3c7;
+  --deny: #b91c1c;
+  --deny-surface: #fee2e2;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+
+  --color-ok: var(--ok);
+  --color-ok-surface: var(--ok-surface);
+  --color-warn: var(--warn);
+  --color-warn-surface: var(--warn-surface);
+  --color-deny: var(--deny);
+  --color-deny-surface: var(--deny-surface);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* El scanner se usa con una mano, en movimiento: nada de zoom accidental
+   por doble tap ni selección de texto al mantener presionado. */
+html {
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}

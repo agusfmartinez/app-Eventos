@@ -1,1 +1,64 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — nunca commitear secretos. .env.example si va al repo.
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# docker — volumenes y backups locales
+/docker/data/
+/backups/
+
+# storage local de imagenes (dev)
+/storage/
+
+# documentacion interna
 ANALISIS.md
+
+# config local de Claude Code (por maquina, no del proyecto)
+/.claude/settings.local.json
+
+# Skills de referencia que instala `prisma init`. Se reinstalan solas y
+# skills-lock.json deja registrado que version corresponde.
+# Ademas .claude/skills y .windsurf/skills son symlinks con rutas ABSOLUTAS
+# a .agents/skills: commiteados no funcionan en otra maquina.
+/.agents/
+/.claude/skills/
+/.windsurf/
+
+# cliente generado por Prisma
+/lib/generated/

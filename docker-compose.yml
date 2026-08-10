@@ -1,0 +1,43 @@
+# Desarrollo local: SOLO la base de datos en contenedor.
+# Next.js corre en el host con `npm run dev` — el bind mount de Windows
+# hace el hot-reload notablemente más lento dentro de Docker.
+#
+# Producción usa docker-compose.prod.yml (se agrega al cerrar la Fase 4).
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: eventos_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eventos
+      POSTGRES_PASSWORD: eventos_dev
+      POSTGRES_DB: eventos
+      # Sin esto, el locale del contenedor afecta el orden de los índices
+      # de texto y los ORDER BY por nombre salen distinto que en producción.
+      LANG: C.UTF-8
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventos -d eventos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Inspección visual de la base. Solo dev.
+  adminer:
+    image: adminer:latest
+    container_name: eventos_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
