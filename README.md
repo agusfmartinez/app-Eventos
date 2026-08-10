@@ -51,6 +51,8 @@ Adminer (inspección de la base): <http://localhost:8080>
 | `npm run build` | Build de producción (salida `standalone`) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
+| `npm run test:smoke` | Smoke test de auth (requiere `npm run dev` corriendo) |
+| `npm run test:eventos` | Smoke test de eventos e invitados (ídem) |
 | `npm run db:up` / `db:down` | Levanta/baja Postgres y Adminer |
 | `npm run db:migrate` | Crea y aplica una migración (desarrollo) |
 | `npm run db:deploy` | Aplica migraciones sin generar (producción) |
@@ -62,6 +64,12 @@ Adminer (inspección de la base): <http://localhost:8080>
 
 - **Postgres corre en Docker, Next corre en el host.** Contenerizar Next en
   desarrollo hace el hot-reload lento en Windows por el bind mount.
+
+- **Después de cambiar el esquema, reiniciá `npm run dev`.** El cliente de
+  Prisma se cachea en `globalThis` (ver [`lib/db.ts`](lib/db.ts)) para que el
+  hot-reload no abra un pool nuevo en cada cambio. El efecto secundario es que
+  un cliente regenerado no se recoge hasta reiniciar el proceso: si no
+  reiniciás, aparecen errores del tipo `The column X does not exist`.
 
 - **La autorización vive en la aplicación, no en la base.** Sin RLS, toda
   página protegida y **toda Server Action** tiene que empezar llamando a
@@ -89,7 +97,7 @@ Adminer (inspección de la base): <http://localhost:8080>
 ## Estado
 
 - [x] **Fase 1** — Docker, base de datos, esquema, autenticación, roles, panel base
-- [ ] Fase 2 — CRUD de eventos e invitados
+- [x] **Fase 2** — CRUD de eventos e invitados, búsqueda, auditoría
 - [ ] Fase 3 — Invitaciones, QR y link público `/i/:token`
 - [ ] Fase 4 — Scanner y check-in atómico
 - [ ] Fase 5 — Dashboard e historial

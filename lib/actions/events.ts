@@ -1,0 +1,173 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+import { recordAudit } from "@/lib/audit";
+import { requireAdminOrOrganizer } from "@/lib/authz";
+import { prisma } from "@/lib/db";
+import { fieldErrorsFrom, type FormState } from "@/lib/form-state";
+import {
+  eventInputFromFormData,
+  parseEventDate,
+} from "@/lib/validators/event";
+
+/**
+ * Cada acción abre con requireAuth: son endpoints HTTP que se pueden invocar
+ * directamente, sin pasar por la página que las expone. Proteger solo el
+ * layout no alcanza.
+ */
+
+export async function createEventAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireAdminOrOrganizer();
+
+  const parsed = eventInputFromFormData(formData);
+  if (!parsed.success) {
+    return { fieldErrors: fieldErrorsFrom(parsed.error) };
+  }
+
+  const input = parsed.data;
+  let eventId: string;
+
+  try {
+    const event = await prisma.$transaction(async (tx) => {
+      const created = await tx.event.create({
+        data: {
+          name: input.name,
+          eventDate: parseEventDate(input.eventDate),
+          startTime: input.startTime,
+          endTime: input.endTime,
+          location: input.location,
+          notes: input.notes,
+          status: input.status,
+          createdById: user.id,
+        },
+        select: { id: true, name: true },
+      });
+
+      await recordAudit(tx, {
+        actorId: user.id,
+        action: "event.create",
+        entity: "event",
+        entityId: created.id,
+        payload: { name: created.name },
+      });
+
+      return created;
+    });
+
+    eventId = event.id;
+  } catch (error) {
+    console.error("createEventAction", error);
+    return { error: "No se pudo crear el evento. Intentá de nuevo." };
+  }
+
+  revalidatePath("/panel");
+  // Fuera del try: redirect() funciona lanzando una excepción, y atraparla
+  // haría que el formulario nunca navegue.
+  redirect(`/panel/eventos/${eventId}`);
+}
+
+export async function updateEventAction(
+  eventId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireAdminOrOrganizer();
+
+  const parsed = eventInputFromFormData(formData);
+  if (!parsed.success) {
+    return { fieldErrors: fieldErrorsFrom(parsed.error) };
+  }
+
+  const input = parsed.data;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.event.update({
+        where: { id: eventId },
+        data: {
+          name: input.name,
+          eventDate: parseEventDate(input.eventDate),
+          startTime: input.startTime,
+          endTime: input.endTime,
+          location: input.location,
+          notes: input.notes,
+          status: input.status,
+        },
+        // No necesitamos la fila de vuelta. Sin select, Prisma pide todas las
+        // columnas y la query se rompe ante cualquier desfasaje entre el
+        // cliente generado y el esquema real.
+        select: { id: true },
+      });
+
+      await recordAudit(tx, {
+        actorId: user.id,
+        action: "event.update",
+        entity: "event",
+        entityId: eventId,
+        payload: { name: input.name, status: input.status },
+      });
+    });
+  } catch (error) {
+    console.error("updateEventAction", error);
+    return { error: "No se pudo guardar el evento. Intentá de nuevo." };
+  }
+
+  revalidatePath("/panel");
+  revalidatePath(`/panel/eventos/${eventId}`);
+  redirect(`/panel/eventos/${eventId}`);
+}
+
+/**
+ * Borrado real, con cascada a invitados, invitaciones y check-ins.
+ *
+ * Se exige tipear el nombre del evento porque borrar uno con la fiesta ya
+ * hecha destruye el historial de ingresos. Para cancelar un evento sin perder
+ * nada está el estado CANCELLED.
+ */
+export async function deleteEventAction(
+  eventId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireAdminOrOrganizer();
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { id: true, name: true, _count: { select: { checkIns: true } } },
+  });
+
+  if (!event) return { error: "El evento ya no existe." };
+
+  const typed = String(formData.get("confirmName") ?? "").trim();
+  if (typed !== event.name) {
+    return {
+      fieldErrors: {
+        confirmName: "El nombre no coincide con el del evento.",
+      },
+    };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.event.delete({ where: { id: eventId } });
+      await recordAudit(tx, {
+        actorId: user.id,
+        action: "event.delete",
+        entity: "event",
+        entityId: eventId,
+        payload: { name: event.name, checkInsDestroyed: event._count.checkIns },
+      });
+    });
+  } catch (error) {
+    console.error("deleteEventAction", error);
+    return { error: "No se pudo eliminar el evento." };
+  }
+
+  revalidatePath("/panel");
+  redirect("/panel");
+}

@@ -1,0 +1,143 @@
+import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
+import { GuestForm } from "@/components/guests/guest-form";
+import { ButtonLink } from "@/components/ui/button";
+import { Badge, Card, PageHeader } from "@/components/ui/misc";
+import { updateGuestAction } from "@/lib/actions/guests";
+import { requireAdminOrOrganizer } from "@/lib/authz";
+import { prisma } from "@/lib/db";
+import { formatDateTime, guestFullName } from "@/lib/format";
+import {
+  deriveStatus,
+  STATUS_LABELS,
+  STATUS_TONES,
+} from "@/lib/invitation-status";
+
+export const dynamic = "force-dynamic";
+
+export default async function InvitadoPage({
+  params,
+}: {
+  params: Promise<{ id: string; guestId: string }>;
+}) {
+  await requireAdminOrOrganizer();
+  const { id, guestId } = await params;
+
+  const guest = await prisma.guest.findFirst({
+    // eventId en el where, no solo el guestId: si no, cambiando el id del
+    // evento en la URL se podría abrir un invitado de otro evento.
+    where: { id: guestId, eventId: id },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      email: true,
+      notes: true,
+      createdAt: true,
+      event: { select: { id: true, name: true } },
+      invitation: {
+        select: {
+          shortCode: true,
+          maxPeople: true,
+          enteredCount: true,
+          status: true,
+        },
+      },
+      checkIns: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          peopleCount: true,
+          createdAt: true,
+          stationLabel: true,
+          operator: { select: { fullName: true } },
+        },
+      },
+    },
+  });
+
+  if (!guest) notFound();
+
+  const inv = guest.invitation;
+  const derived = inv ? deriveStatus(inv) : null;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title={guestFullName(guest)}
+        subtitle={
+          <>
+            {guest.event.name}
+            {inv ? ` · código ${inv.shortCode}` : ""}
+            {derived ? (
+              <span className="ml-2">
+                <Badge tone={STATUS_TONES[derived]}>
+                  {STATUS_LABELS[derived]}
+                </Badge>
+              </span>
+            ) : null}
+          </>
+        }
+        actions={
+          <ButtonLink href={`/panel/eventos/${guest.event.id}`} variant="secondary">
+            <ArrowLeft size={16} />
+            Volver
+          </ButtonLink>
+        }
+      />
+
+      <Card className="p-5">
+        <GuestForm
+          action={updateGuestAction.bind(null, guest.id)}
+          submitLabel="Guardar cambios"
+          defaultValues={{
+            firstName: guest.firstName,
+            lastName: guest.lastName,
+            phone: guest.phone ?? "",
+            email: guest.email ?? "",
+            notes: guest.notes ?? "",
+            maxPeople: inv?.maxPeople ?? 1,
+            status: inv?.status,
+          }}
+        />
+      </Card>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-semibold">Historial de ingresos</h2>
+
+        {guest.checkIns.length === 0 ? (
+          <Card className="p-4 text-sm text-muted">
+            Todavía no registró ingresos.
+          </Card>
+        ) : (
+          <Card className="divide-y divide-border">
+            {guest.checkIns.map((checkIn) => (
+              <div
+                key={checkIn.id}
+                className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
+              >
+                <span>
+                  <strong className="tabular-nums">
+                    {checkIn.peopleCount}
+                  </strong>{" "}
+                  {checkIn.peopleCount === 1 ? "persona" : "personas"}
+                </span>
+                <span className="text-muted">
+                  {formatDateTime(checkIn.createdAt)}
+                  {checkIn.stationLabel ? ` · ${checkIn.stationLabel}` : ""}
+                  {checkIn.operator ? ` · ${checkIn.operator.fullName}` : ""}
+                </span>
+              </div>
+            ))}
+          </Card>
+        )}
+      </section>
+
+      <p className="text-xs text-muted">
+        Invitado creado el {formatDateTime(guest.createdAt)}.
+      </p>
+    </div>
+  );
+}
