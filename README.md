@@ -53,6 +53,7 @@ Adminer (inspección de la base): <http://localhost:8080>
 | `npm run lint` | ESLint |
 | `npm run test:smoke` | Smoke test de auth (requiere `npm run dev` corriendo) |
 | `npm run test:eventos` | Smoke test de eventos e invitados (ídem) |
+| `npm run test:invitaciones` | Smoke test del QR, link público e imagen (ídem) |
 | `npm run db:up` / `db:down` | Levanta/baja Postgres y Adminer |
 | `npm run db:migrate` | Crea y aplica una migración (desarrollo) |
 | `npm run db:deploy` | Aplica migraciones sin generar (producción) |
@@ -90,6 +91,17 @@ Adminer (inspección de la base): <http://localhost:8080>
 - **Las horas de evento son strings `"HH:MM"`.** Guardarlas como timestamp
   arrastra zona horaria y desordena el historial.
 
+- **`APP_URL` es lo que se codifica en el QR.** Si queda en `localhost`, los QR
+  generados no funcionan fuera de esta máquina. Antes de mandar invitaciones
+  reales tiene que apuntar al dominio público.
+
+- **La imagen de la invitación la renderiza Satori, no un navegador.** Solo
+  soporta flexbox, y **todo `<div>` con más de un hijo necesita
+  `display: flex`** — incluidas las interpolaciones: `{a} {b}` cuentan como
+  varios hijos. De ahí que en
+  [`app/i/[token]/imagen/route.tsx`](app/i/[token]/imagen/route.tsx) los textos
+  compuestos se armen como un único template string.
+
 - **El scanner necesita HTTPS.** `getUserMedia()` no da acceso a la cámara sin
   contexto seguro. En `localhost` funciona; desde un celular contra la IP de la
   LAN, no.
@@ -98,7 +110,7 @@ Adminer (inspección de la base): <http://localhost:8080>
 
 - [x] **Fase 1** — Docker, base de datos, esquema, autenticación, roles, panel base
 - [x] **Fase 2** — CRUD de eventos e invitados, búsqueda, auditoría
-- [ ] Fase 3 — Invitaciones, QR y link público `/i/:token`
+- [x] **Fase 3** — QR, link público `/i/:token`, imagen descargable, WhatsApp
 - [ ] Fase 4 — Scanner y check-in atómico
 - [ ] Fase 5 — Dashboard e historial
 - [ ] Fase 6 — Importación CSV

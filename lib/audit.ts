@@ -18,7 +18,8 @@ export type AuditAction =
   | "guest.update"
   | "guest.delete"
   | "invitation.update_status"
-  | "invitation.update_max_people";
+  | "invitation.update_max_people"
+  | "invitation.regenerate";
 
 export function recordAudit(
   db: AuditClient,

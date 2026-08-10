@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { GuestForm } from "@/components/guests/guest-form";
+import { InvitationCard } from "@/components/invitations/invitation-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge, Card, PageHeader } from "@/components/ui/misc";
 import { updateGuestAction } from "@/lib/actions/guests";
@@ -36,13 +37,23 @@ export default async function InvitadoPage({
       email: true,
       notes: true,
       createdAt: true,
-      event: { select: { id: true, name: true } },
+      event: {
+        select: {
+          id: true,
+          name: true,
+          eventDate: true,
+          startTime: true,
+          location: true,
+        },
+      },
       invitation: {
         select: {
+          token: true,
           shortCode: true,
           maxPeople: true,
           enteredCount: true,
           status: true,
+          revokedAt: true,
         },
       },
       checkIns: {
@@ -87,6 +98,18 @@ export default async function InvitadoPage({
           </ButtonLink>
         }
       />
+
+      {inv ? (
+        <InvitationCard
+          guestId={guest.id}
+          guestName={guestFullName(guest)}
+          phone={guest.phone}
+          token={inv.token}
+          shortCode={inv.shortCode}
+          maxPeople={inv.maxPeople}
+          event={guest.event}
+        />
+      ) : null}
 
       <Card className="p-5">
         <GuestForm
