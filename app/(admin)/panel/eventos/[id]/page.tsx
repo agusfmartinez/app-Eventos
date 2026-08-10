@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, ScanLine, Search, Users } from "lucide-react";
 
+import { DraftBanner } from "@/components/events/draft-banner";
 import { AddGuestPanel } from "@/components/guests/add-guest-panel";
 import { GuestActions } from "@/components/guests/guest-actions";
 import { ButtonLink } from "@/components/ui/button";
@@ -141,6 +142,8 @@ export default async function EventoPage({
           </>
         }
       />
+
+      {event.status === "DRAFT" ? <DraftBanner eventId={event.id} /> : null}
 
       {event.notes ? (
         <Card className="p-4 text-sm whitespace-pre-wrap">{event.notes}</Card>

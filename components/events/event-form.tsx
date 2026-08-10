@@ -68,7 +68,12 @@ export function EventForm({
         />
       </Field>
 
-      <Field label="Estado" htmlFor="status" error={err.status}>
+      <Field
+        label="Estado"
+        htmlFor="status"
+        error={err.status}
+        hint="Solo los eventos publicados o en curso aparecen en el control de acceso."
+      >
         <Select
           id="status"
           name="status"

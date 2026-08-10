@@ -7,6 +7,7 @@ import { recordAudit } from "@/lib/audit";
 import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { fieldErrorsFrom, type FormState } from "@/lib/form-state";
+import { EventStatus } from "@/lib/generated/prisma/enums";
 import {
   eventInputFromFormData,
   parseEventDate,
@@ -120,6 +121,43 @@ export async function updateEventAction(
   revalidatePath("/panel");
   revalidatePath(`/panel/eventos/${eventId}`);
   redirect(`/panel/eventos/${eventId}`);
+}
+
+/**
+ * Publica un evento en un clic desde su ficha.
+ *
+ * Existe porque el estado por defecto es borrador y un borrador no aparece en
+ * el control de acceso: sin este atajo, la única forma de habilitar la puerta
+ * es entrar a editar el evento y cambiar un desplegable, que no es obvio.
+ */
+export async function publishEventAction(eventId: string): Promise<FormState> {
+  const user = await requireAdminOrOrganizer();
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.event.update({
+        where: { id: eventId },
+        data: { status: EventStatus.PUBLISHED },
+        select: { id: true },
+      });
+
+      await recordAudit(tx, {
+        actorId: user.id,
+        action: "event.update",
+        entity: "event",
+        entityId: eventId,
+        payload: { status: EventStatus.PUBLISHED, via: "publish_shortcut" },
+      });
+    });
+  } catch (error) {
+    console.error("publishEventAction", error);
+    return { error: "No se pudo publicar el evento." };
+  }
+
+  revalidatePath("/panel");
+  revalidatePath(`/panel/eventos/${eventId}`);
+  revalidatePath("/control");
+  return { ok: true };
 }
 
 /**
