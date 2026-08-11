@@ -58,6 +58,7 @@ Adminer (inspección de la base): <http://localhost:8080>
 | `npm run test:concurrencia` | **Check-in atómico bajo carga. No necesita el server.** |
 | `npm run test:reportes` | Estadísticas, historial y exportación CSV (requiere el server) |
 | `npm run test:espacios` | Espacios, cupo y detección de doble reserva (requiere el server) |
+| `npm run test:calendario` | Grilla del calendario y ocupación (requiere el server) |
 | `npm run db:up` / `db:down` | Levanta/baja Postgres y Adminer |
 | `npm run db:migrate` | Crea y aplica una migración (desarrollo) |
 | `npm run db:deploy` | Aplica migraciones sin generar (producción) |
@@ -103,6 +104,11 @@ Adminer (inspección de la base): <http://localhost:8080>
   VALUES ('<event-uuid>', '<user-uuid>', 'Puerta 1', now());
   ```
 
+- **El día del salón arranca a las 08:00**, no a la medianoche
+  (`VENUE_DAY_START_MIN` en [`lib/schedule.ts`](lib/schedule.ts)). Una fiesta
+  de 21:00 a 05:00 pertenece a la noche del 15, no mitad al 15 y mitad al 16:
+  con la ventana anclada a las 08:00 se ve entera en una sola pantalla.
+
 - **Dos eventos no pueden pisarse en el mismo espacio.** Se valida al guardar
   en [`lib/actions/events.ts`](lib/actions/events.ts) y se rechaza. Si hace
   falta un solapamiento real, la salida es dejar uno de los dos sin espacio
@@ -147,7 +153,8 @@ Adminer (inspección de la base): <http://localhost:8080>
 - [x] **Fase 4** — Scanner con cámara y check-in atómico
 - [x] **Fase 5** — Dashboard, historial de ingresos y exportación CSV
 - [x] **Fase 6** — Espacios / sub-salones, cupo del evento y doble reserva
-- [ ] Fase 7 — Calendario de disponibilidad (ver `ROADMAP.md`)
+- [x] **Fase 7** — Calendario de disponibilidad (vista mes y día)
+- [ ] Fase 8 — Usuarios y asignación de recepción (ver `ROADMAP.md`)
 - [ ] Fase 6 — Importación CSV
 - [ ] Fase 7 — Roles y autorización estricta
 - [ ] Fase 8 — WhatsApp Business API (opcional)

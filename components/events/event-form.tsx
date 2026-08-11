@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef } from "react";
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { useFormStatus } from "react-dom";
+import { CalendarSearch } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select, Textarea } from "@/components/ui/field";
@@ -73,6 +73,24 @@ export function EventForm({
   const v = { ...emptyValues, ...defaultValues, ...(state.values ?? {}) };
 
   const maxGuestsRef = useRef<HTMLInputElement>(null);
+  const dateRef = useRef<HTMLInputElement>(null);
+  const spaceRef = useRef<HTMLSelectElement>(null);
+
+  /**
+   * Abre el calendario en la fecha y el espacio que se están cargando.
+   *
+   * Es el momento en que hace falta: el organizador está con el anfitrión al
+   * teléfono y necesita responder qué hay libre sin perder lo que ya escribió.
+   * Por eso abre en una pestaña nueva.
+   */
+  function openAvailability() {
+    const params = new URLSearchParams({ vista: "dia" });
+    const date = dateRef.current?.value;
+    const space = spaceRef.current?.value;
+    if (date) params.set("dia", date);
+    if (space) params.set("espacio", space);
+    window.open(`/panel/calendario?${params.toString()}`, "_blank");
+  }
 
   /**
    * Al elegir un espacio, propone su capacidad como cupo — pero solo si el
@@ -133,6 +151,7 @@ export function EventForm({
             id="eventDate"
             name="eventDate"
             type="date"
+            ref={dateRef}
             defaultValue={v.eventDate}
             error={err.eventDate}
           />
@@ -178,6 +197,7 @@ export function EventForm({
           <Select
             id="spaceId"
             name="spaceId"
+            ref={spaceRef}
             defaultValue={v.spaceId}
             error={err.spaceId}
             onChange={onSpaceChange}
@@ -211,6 +231,15 @@ export function EventForm({
           />
         </Field>
       </div>
+
+      <button
+        type="button"
+        onClick={openAvailability}
+        className="flex items-center gap-1.5 self-start text-sm font-medium text-brand hover:underline"
+      >
+        <CalendarSearch size={15} />
+        Ver disponibilidad de esa fecha
+      </button>
 
       <Field label="Ubicación" htmlFor="location" error={err.location}>
         <Input

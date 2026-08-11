@@ -22,6 +22,18 @@ import { prisma } from "@/lib/db";
 
 const MINUTES_PER_DAY = 24 * 60;
 
+/**
+ * A qué hora arranca "el día" para el salón.
+ *
+ * Una fiesta de 21:00 a 05:00 pertenece a la noche del 15, no mitad al 15 y
+ * mitad al 16. Si la vista de día fuera de 00:00 a 24:00, esa fiesta
+ * aparecería partida en dos y contestar "¿qué tengo el 15 a la noche?" pasaría
+ * a requerir mirar dos pantallas.
+ *
+ * Anclando el día a las 08:00, la noche entera entra en una sola vista.
+ */
+export const VENUE_DAY_START_MIN = 8 * 60;
+
 export type Interval = { start: number; end: number };
 
 export type SchedulableEvent = {
@@ -135,6 +147,108 @@ export async function findScheduleConflicts({
   return candidates.filter((candidate) =>
     overlaps(target, eventInterval(candidate)),
   );
+}
+
+/** Día calendario de una fecha, expuesto para el armado del calendario. */
+export function dayIndex(date: Date): number {
+  return dayNumber(date);
+}
+
+/** Ventana de 24 horas que el salón considera "el día" de esa fecha. */
+export function venueDayWindow(date: Date): Interval {
+  const start = dayNumber(date) * MINUTES_PER_DAY + VENUE_DAY_START_MIN;
+  return { start, end: start + MINUTES_PER_DAY };
+}
+
+export type OccupiedEvent = {
+  id: string;
+  name: string;
+  eventDate: Date;
+  startTime: string | null;
+  endTime: string | null;
+  status: string;
+  spaceId: string | null;
+  spaceName: string | null;
+  interval: Interval;
+};
+
+/**
+ * Eventos que ocupan algo dentro del rango de fechas indicado.
+ *
+ * Se consulta con un día de margen a cada lado porque un evento del día
+ * anterior que termina de madrugada ocupa parte del día pedido, y el
+ * calendario tiene que mostrarlo: es justo la franja que alguien podría creer
+ * libre.
+ */
+export async function getOccupancy({
+  fromDate,
+  toDate,
+  spaceId,
+}: {
+  fromDate: Date;
+  toDate: Date;
+  spaceId?: string | null;
+}): Promise<OccupiedEvent[]> {
+  const from = new Date(fromDate);
+  from.setUTCDate(from.getUTCDate() - 1);
+  const to = new Date(toDate);
+  to.setUTCDate(to.getUTCDate() + 1);
+
+  const events = await prisma.event.findMany({
+    where: {
+      status: { not: "CANCELLED" },
+      eventDate: { gte: from, lte: to },
+      ...(spaceId ? { spaceId } : {}),
+    },
+    orderBy: [{ eventDate: "asc" }, { startTime: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      eventDate: true,
+      startTime: true,
+      endTime: true,
+      status: true,
+      spaceId: true,
+      space: { select: { name: true } },
+    },
+  });
+
+  return events.map((event) => ({
+    id: event.id,
+    name: event.name,
+    eventDate: event.eventDate,
+    startTime: event.startTime,
+    endTime: event.endTime,
+    status: event.status,
+    spaceId: event.spaceId,
+    spaceName: event.space?.name ?? null,
+    interval: eventInterval(event),
+  }));
+}
+
+/**
+ * Recorta una franja a una ventana y la devuelve como porcentajes.
+ *
+ * Es lo que permite dibujar la barra de un evento dentro de la columna del
+ * día: un evento que empezó ayer aparece pegado al borde superior en vez de
+ * desbordar la vista.
+ */
+export function clipToWindow(
+  interval: Interval,
+  window: Interval,
+): { offsetPct: number; sizePct: number; clippedStart: boolean; clippedEnd: boolean } | null {
+  const start = Math.max(interval.start, window.start);
+  const end = Math.min(interval.end, window.end);
+  if (start >= end) return null;
+
+  const span = window.end - window.start;
+
+  return {
+    offsetPct: ((start - window.start) / span) * 100,
+    sizePct: ((end - start) / span) * 100,
+    clippedStart: interval.start < window.start,
+    clippedEnd: interval.end > window.end,
+  };
 }
 
 function formatSpan(conflict: ScheduleConflict): string {

@@ -16,6 +16,7 @@
     "test:scanner": "tsx scripts/smoke-scanner.ts",
     "test:reportes": "tsx scripts/smoke-reportes.ts",
     "test:espacios": "tsx --conditions=react-server scripts/smoke-espacios.ts",
+    "test:calendario": "tsx --conditions=react-server scripts/smoke-calendario.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "prisma migrate reset",
