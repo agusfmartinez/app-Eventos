@@ -71,6 +71,38 @@ Adminer (inspección de la base): <http://localhost:8080>
 - **Postgres corre en Docker, Next corre en el host.** Contenerizar Next en
   desarrollo hace el hot-reload lento en Windows por el bind mount.
 
+- **Tildá "Disable cache" en la pestaña Network de DevTools mientras
+  desarrollás.** Turbopack sirve el CSS de desarrollo siempre en la misma URL
+  (`/_next/static/chunks/[root-of-the-server]__…css`) y le cambia el contenido
+  por debajo, así que el navegador se queda con la copia vieja y la página
+  aparece a medio estilar. Medido en este proyecto: el navegador tenía 20.670
+  bytes cuando el servidor ya servía 32.635, y las utilidades nuevas de
+  Tailwind directamente no existían del lado del cliente.
+
+  Con DevTools abierto y esa opción tildada no vuelve a pasar. Sin DevTools,
+  el síntoma se corrige con `Ctrl+Shift+R`.
+
+  Tres cosas que **no** son la solución, ya probadas y descartadas:
+  - `next dev --webpack`: en Next 16 rompe el router del cliente con
+    `Cannot read properties of undefined (reading 'get')` en
+    `OuterLayoutRouter`.
+  - `Cache-Control` propio sobre `/_next/static/*` desde `next.config.ts`:
+    funciona, pero Next avisa que *"can break Next.js development behavior"* —
+    incluso acotándolo solo a `.css`.
+  - Borrar `.next`: no cambia nada, el problema está en el navegador.
+
+  Nada de esto afecta a producción: ahí los assets llevan hash de contenido y
+  se sirven `immutable`, verificado.
+
+- **Desactivá Dark Reader (o cualquier extensión que altere el CSS) en
+  `localhost`.** La app usa una paleta clara fija a propósito —el scanner usa
+  el color como señal semántica— y estas extensiones reescriben los estilos y
+  el DOM antes de que React hidrate. Síntomas: avisos de *hydration mismatch*
+  con atributos `data-darkreader-*` y colores que no son los del diseño.
+
+  Es un problema distinto del cacheo del CSS, aunque los dos se manifiesten
+  como "se ven mal los estilos".
+
 - **Después de cambiar el esquema, reiniciá `npm run dev`.** El cliente de
   Prisma se cachea en `globalThis` (ver [`lib/db.ts`](lib/db.ts)) para que el
   hot-reload no abra un pool nuevo en cada cambio. El efecto secundario es que
