@@ -573,15 +573,26 @@ export function Scanner({
             </div>
           </details>
 
-          <label className="flex items-center gap-2 text-sm text-muted">
-            <span className="shrink-0">Puesto:</span>
-            <input
-              ref={initStationInput}
-              onChange={(e) => persistStation(e.target.value)}
-              placeholder="Puerta 1"
-              className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-foreground"
-            />
-          </label>
+          <div className="flex flex-col gap-1">
+            <label
+              htmlFor="station"
+              className="flex items-center gap-2 text-sm text-muted"
+            >
+              <span className="shrink-0">Puesto:</span>
+              <input
+                id="station"
+                ref={initStationInput}
+                onChange={(e) => persistStation(e.target.value)}
+                placeholder="Puerta 1"
+                className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-foreground"
+              />
+            </label>
+            <p className="text-xs text-muted">
+              Opcional. Si el salón tiene más de una entrada, poné cuál es esta
+              y el historial va a mostrar por dónde entró cada invitado. Con una
+              sola puerta, dejalo vacío.
+            </p>
+          </div>
         </div>
       ) : null}
     </div>

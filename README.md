@@ -56,6 +56,7 @@ Adminer (inspección de la base): <http://localhost:8080>
 | `npm run test:invitaciones` | Smoke test del QR, link público e imagen (ídem) |
 | `npm run test:scanner` | Permisos del control de acceso (ídem) |
 | `npm run test:concurrencia` | **Check-in atómico bajo carga. No necesita el server.** |
+| `npm run test:reportes` | Estadísticas, historial y exportación CSV (requiere el server) |
 | `npm run db:up` / `db:down` | Levanta/baja Postgres y Adminer |
 | `npm run db:migrate` | Crea y aplica una migración (desarrollo) |
 | `npm run db:deploy` | Aplica migraciones sin generar (producción) |
@@ -137,7 +138,7 @@ Adminer (inspección de la base): <http://localhost:8080>
 - [x] **Fase 2** — CRUD de eventos e invitados, búsqueda, auditoría
 - [x] **Fase 3** — QR, link público `/i/:token`, imagen descargable, WhatsApp
 - [x] **Fase 4** — Scanner con cámara y check-in atómico
-- [ ] Fase 5 — Dashboard e historial
+- [x] **Fase 5** — Dashboard, historial de ingresos y exportación CSV
 - [ ] Fase 6 — Importación CSV
 - [ ] Fase 7 — Roles y autorización estricta
 - [ ] Fase 8 — WhatsApp Business API (opcional)

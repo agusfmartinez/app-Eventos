@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarOff, ScanLine } from "lucide-react";
+import { CalendarOff, LayoutDashboard, ScanLine } from "lucide-react";
 
 import { logoutAction } from "@/lib/actions/session";
 import { requireAuth } from "@/lib/authz";
@@ -46,11 +46,23 @@ export default async function ControlPage() {
           <ScanLine size={20} className="text-brand" />
           <span className="font-semibold">Control de acceso</span>
         </div>
-        <form action={logoutAction}>
-          <button type="submit" className="text-sm text-muted">
-            Salir
-          </button>
-        </form>
+
+        <div className="flex items-center gap-3">
+          {!isStaffOnly ? (
+            <Link
+              href="/panel"
+              className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted"
+            >
+              <LayoutDashboard size={15} />
+              Panel
+            </Link>
+          ) : null}
+          <form action={logoutAction}>
+            <button type="submit" className="text-sm text-muted">
+              Salir
+            </button>
+          </form>
+        </div>
       </header>
 
       <div className="mx-auto w-full max-w-lg flex-1 p-4">

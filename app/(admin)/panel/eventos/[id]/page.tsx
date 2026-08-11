@@ -1,13 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil, ScanLine, Search, Users } from "lucide-react";
+import {
+  Download,
+  History,
+  Pencil,
+  ScanLine,
+  Search,
+  StickyNote,
+  Users,
+} from "lucide-react";
 
 import { DraftBanner } from "@/components/events/draft-banner";
+import { EventDashboard } from "@/components/events/event-dashboard";
 import { AddGuestPanel } from "@/components/guests/add-guest-panel";
 import { GuestActions } from "@/components/guests/guest-actions";
 import { ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
-import { Badge, Card, EmptyState, PageHeader, StatCard } from "@/components/ui/misc";
+import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/misc";
 import { createGuestAction } from "@/lib/actions/guests";
 import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
@@ -17,12 +26,12 @@ import {
   formatPhone,
   guestFullName,
 } from "@/lib/format";
-import { InvitationStatus } from "@/lib/generated/prisma/enums";
 import {
   deriveStatus,
   STATUS_LABELS,
   STATUS_TONES,
 } from "@/lib/invitation-status";
+import { getEventStats, getHourlyEntries } from "@/lib/stats";
 import { digitsOnly } from "@/lib/validators/guest";
 
 export const dynamic = "force-dynamic";
@@ -69,7 +78,8 @@ export default async function EventoPage({
       }
     : { eventId: id };
 
-  const [guests, allInvitations] = await Promise.all([
+  // Las estadísticas son del evento completo, no del filtro de búsqueda.
+  const [guests, stats, hourly] = await Promise.all([
     prisma.guest.findMany({
       where,
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
@@ -88,24 +98,9 @@ export default async function EventoPage({
         },
       },
     }),
-    // Stats sobre el evento completo, no sobre el filtro de búsqueda.
-    prisma.invitation.findMany({
-      where: { eventId: id },
-      select: { status: true, maxPeople: true, enteredCount: true },
-    }),
+    getEventStats(id),
+    getHourlyEntries(id),
   ]);
-
-  const stats = {
-    total: allInvitations.length,
-    enabled: allInvitations.filter((i) => i.status === InvitationStatus.ENABLED)
-      .length,
-    pending: allInvitations.filter((i) => i.status === InvitationStatus.PENDING)
-      .length,
-    blocked: allInvitations.filter((i) => i.status === InvitationStatus.BLOCKED)
-      .length,
-    entered: allInvitations.reduce((sum, i) => sum + i.enteredCount, 0),
-    capacity: allInvitations.reduce((sum, i) => sum + i.maxPeople, 0),
-  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -128,7 +123,21 @@ export default async function EventoPage({
         }
         actions={
           <>
-            <ButtonLink href={`/control?evento=${event.id}`} variant="secondary">
+            <ButtonLink
+              href={`/panel/eventos/${event.id}/ingresos`}
+              variant="secondary"
+            >
+              <History size={16} />
+              Ingresos
+            </ButtonLink>
+            <ButtonLink
+              href={`/panel/eventos/${event.id}/export/invitados`}
+              variant="secondary"
+            >
+              <Download size={16} />
+              Exportar
+            </ButtonLink>
+            <ButtonLink href={`/control/${event.id}`} variant="secondary">
               <ScanLine size={16} />
               Control de acceso
             </ButtonLink>
@@ -146,20 +155,16 @@ export default async function EventoPage({
       {event.status === "DRAFT" ? <DraftBanner eventId={event.id} /> : null}
 
       {event.notes ? (
-        <Card className="p-4 text-sm whitespace-pre-wrap">{event.notes}</Card>
+        <Card className="p-4">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+            <StickyNote size={15} className="text-muted" />
+            Información adicional
+          </h2>
+          <p className="mt-1.5 text-sm whitespace-pre-wrap">{event.notes}</p>
+        </Card>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <StatCard label="Invitados" value={stats.total} />
-        <StatCard label="Habilitados" value={stats.enabled} />
-        <StatCard label="Pendientes" value={stats.pending} tone="warn" />
-        <StatCard label="Bloqueados" value={stats.blocked} tone="deny" />
-        <StatCard
-          label="Ingresaron"
-          value={`${stats.entered}/${stats.capacity}`}
-          tone="ok"
-        />
-      </div>
+      <EventDashboard stats={stats} hourly={hourly} />
 
       <AddGuestPanel action={createGuestAction.bind(null, event.id)} />
 
@@ -234,8 +239,10 @@ export default async function EventoPage({
 
                   {inv ? (
                     <div className="flex items-center gap-3">
+                      {/* String único: interpolar por separado hace que React
+                          intercale marcadores de comentario en el HTML. */}
                       <span className="text-sm tabular-nums text-muted">
-                        {inv.enteredCount}/{inv.maxPeople}
+                        {`${inv.enteredCount}/${inv.maxPeople}`}
                       </span>
                       {derived ? (
                         <Badge tone={STATUS_TONES[derived]}>

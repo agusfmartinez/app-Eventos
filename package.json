@@ -14,6 +14,7 @@
     "test:invitaciones": "tsx scripts/smoke-invitaciones.ts",
     "test:concurrencia": "tsx --conditions=react-server scripts/smoke-concurrencia.ts",
     "test:scanner": "tsx scripts/smoke-scanner.ts",
+    "test:reportes": "tsx scripts/smoke-reportes.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "prisma migrate reset",
