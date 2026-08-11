@@ -15,7 +15,7 @@ import { InvitationStatus } from "../lib/generated/prisma/enums";
 import { whatsappLink } from "../lib/invitation-url";
 import { generateInvitationToken, generateShortCode } from "../lib/tokens";
 
-const BASE = process.env.APP_URL ?? "http://localhost:3000";
+const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000";
 const MARKER = `SMOKEINV-${Date.now()}`;
 
 const prisma = new PrismaClient({

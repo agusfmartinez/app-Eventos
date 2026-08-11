@@ -12,6 +12,10 @@ import {
 
 import { DraftBanner } from "@/components/events/draft-banner";
 import { EventDashboard } from "@/components/events/event-dashboard";
+import {
+  CapacityWarning,
+  ScheduleConflictWarning,
+} from "@/components/events/event-warnings";
 import { AddGuestPanel } from "@/components/guests/add-guest-panel";
 import { GuestActions } from "@/components/guests/guest-actions";
 import { ButtonLink } from "@/components/ui/button";
@@ -31,6 +35,7 @@ import {
   STATUS_LABELS,
   STATUS_TONES,
 } from "@/lib/invitation-status";
+import { findScheduleConflicts } from "@/lib/schedule";
 import { getEventStats, getHourlyEntries } from "@/lib/stats";
 import { digitsOnly } from "@/lib/validators/guest";
 
@@ -59,10 +64,19 @@ export default async function EventoPage({
       location: true,
       notes: true,
       status: true,
+      spaceId: true,
+      maxGuests: true,
+      space: { select: { name: true } },
     },
   });
 
   if (!event) notFound();
+
+  const conflicts = await findScheduleConflicts({
+    spaceId: event.spaceId,
+    event,
+    excludeEventId: event.id,
+  });
 
   // Busca por nombre, apellido o teléfono. El teléfono se guarda solo con
   // dígitos, así que la consulta normaliza lo que el usuario tipeó.
@@ -108,6 +122,7 @@ export default async function EventoPage({
         title={event.name}
         subtitle={
           <>
+            {event.space ? `${event.space.name} · ` : ""}
             {formatEventDate(event.eventDate)}
             {event.startTime ? ` · ${event.startTime}` : ""}
             {event.endTime ? ` a ${event.endTime} hs` : event.startTime ? " hs" : ""}
@@ -153,6 +168,20 @@ export default async function EventoPage({
       />
 
       {event.status === "DRAFT" ? <DraftBanner eventId={event.id} /> : null}
+
+      {event.space ? (
+        <ScheduleConflictWarning
+          conflicts={conflicts}
+          spaceName={event.space.name}
+        />
+      ) : null}
+
+      {event.maxGuests ? (
+        <CapacityWarning
+          capacity={event.maxGuests}
+          authorized={stats.capacity}
+        />
+      ) : null}
 
       {event.notes ? (
         <Card className="p-4">

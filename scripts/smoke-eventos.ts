@@ -17,7 +17,7 @@ import { InvitationStatus } from "../lib/generated/prisma/enums";
 import { deriveStatus } from "../lib/invitation-status";
 import { generateInvitationToken, generateShortCode } from "../lib/tokens";
 
-const BASE = process.env.APP_URL ?? "http://localhost:3000";
+const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000";
 const EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@salon.local";
 const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "admin1234";
 const MARKER = `SMOKE-${Date.now()}`;

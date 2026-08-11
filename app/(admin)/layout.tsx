@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { CalendarDays, LogOut, ScanLine } from "lucide-react";
+import { CalendarDays, DoorOpen, LogOut, ScanLine } from "lucide-react";
 
 import { logoutAction } from "@/lib/actions/session";
 import { requireAdminOrOrganizer } from "@/lib/authz";
@@ -32,11 +32,18 @@ export default async function AdminLayout({
               Eventos
             </Link>
             <Link
+              href="/panel/espacios"
+              className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-muted hover:bg-background hover:text-foreground"
+            >
+              <DoorOpen size={16} />
+              Espacios
+            </Link>
+            <Link
               href="/control"
               className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-muted hover:bg-background hover:text-foreground"
             >
               <ScanLine size={16} />
-              Control de acceso
+              Recepción
             </Link>
           </nav>
 

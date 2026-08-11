@@ -59,8 +59,11 @@ export function GuestForm({
   resetOnSuccess?: boolean;
 }) {
   const [state, formAction] = useActionState(action, emptyFormState);
-  const v = { ...emptyValues, ...defaultValues };
   const err = state.fieldErrors ?? {};
+
+  // React 19 resetea el formulario al terminar la acción: sin reponer lo
+  // enviado, un error de validación borraría toda la carga del invitado.
+  const v = { ...emptyValues, ...defaultValues, ...(state.values ?? {}) };
 
   // Al cargar invitados en tanda, el formulario tiene que quedar vacío y listo
   // para el siguiente. La key fuerza a React a remontarlo con los defaults.

@@ -17,9 +17,9 @@ que todavía no están construidas.
 | 3. QR, link público, imagen, WhatsApp | ✅ hecha |
 | 4. Scanner y check-in atómico | ✅ hecha |
 | 5. Dashboard, historial y exportación CSV | ✅ hecha |
-| 6. Importación de invitados desde CSV | pendiente |
-| 7. Pantalla de usuarios y asignación de operadores | pendiente |
-| 8. WhatsApp Business API | opcional |
+| 6. Espacios / sub-salones, cupo y doble reserva | ✅ hecha |
+| 7. Calendario de disponibilidad | pendiente |
+| 8. Usuarios y asignación de recepción | pendiente |
 
 Hoy asignar operadores a eventos se hace por SQL (ver README). La Fase 7 lo
 resuelve, y varias de las funcionalidades de abajo dependen de ella.
@@ -294,13 +294,18 @@ Esfuerzo: medio. Es la que **destraba el punto A**.
 
 | # | Qué | Esfuerzo | Por qué en este orden |
 |---|---|---|---|
-| **6** | Importación CSV | chico | Ya estaba planificada y ahorra trabajo manual desde el día uno |
-| **7** | Espacios / sub-salones + cupo del evento (**B**) | chico | Barato, y sin esto el calendario no puede responder por sub-salón |
-| **8** | Calendario de disponibilidad (**D**) | medio | **Se usa en cada llamada de venta.** Es la de mayor uso diario |
-| **9** | Usuarios y asignación de recepción (**E** / Fase 7 original) | medio | Saca el SQL a mano y destraba la siguiente |
-| **10** | Escaneo sin elegir evento (**A**) | medio | Necesita la 9 para el filtro de acceso; luce mejor con la 7 |
-| **11** | Formulario de registro de invitados (**C**) | medio-alto | Lo más grande y lo único que abre escritura al público |
-| **12** | WhatsApp Business API | medio | Como estaba: opcional |
+| ~~6~~ | ~~Importación CSV~~ | — | **Descartada.** La carga masiva va a resolverse con el formulario de registro |
+| ✅ **6** | Espacios / sub-salones + cupo del evento (**B**) | chico | **Hecha.** Incluye `lib/schedule.ts`, la base de cálculo que va a usar el calendario |
+| **7** | Calendario de disponibilidad (**D**) | medio | **Se usa en cada llamada de venta.** Es la de mayor uso diario |
+| **8** | Usuarios y asignación de recepción (**E**) | medio | Saca el SQL a mano y destraba la siguiente |
+| **9** | Escaneo sin elegir evento (**A**) | medio | Necesita la 8 para el filtro de acceso; luce mejor con la 6 |
+| **10** | Formulario de registro de invitados (**C**) | medio-alto | Lo más grande y lo único que abre escritura al público |
+| **11** | WhatsApp Business API | medio | Como estaba: opcional |
+
+> **Consecuencia de descartar el CSV:** hasta que exista el formulario de
+> registro, la única forma de cargar invitados es de a uno por el panel. Para
+> un evento de 200 invitados eso es varias horas de tipeo. Si el formulario se
+> demora, conviene adelantarlo o reponer una importación mínima.
 
 ### Por qué este orden
 

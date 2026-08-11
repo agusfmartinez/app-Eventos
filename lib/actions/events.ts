@@ -6,11 +6,20 @@ import { redirect } from "next/navigation";
 import { recordAudit } from "@/lib/audit";
 import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
-import { fieldErrorsFrom, type FormState } from "@/lib/form-state";
+import {
+  collectValues,
+  fieldErrorsFrom,
+  type FormState,
+} from "@/lib/form-state";
 import { EventStatus } from "@/lib/generated/prisma/enums";
+import {
+  describeScheduleConflicts,
+  findScheduleConflicts,
+} from "@/lib/schedule";
 import {
   eventInputFromFormData,
   parseEventDate,
+  type EventInput,
 } from "@/lib/validators/event";
 
 /**
@@ -18,6 +27,46 @@ import {
  * directamente, sin pasar por la página que las expone. Proteger solo el
  * layout no alcanza.
  */
+
+/**
+ * Rechaza guardar si el espacio ya está ocupado en ese horario.
+ *
+ * Dos fiestas en el mismo ambiente a la misma hora es un error de carga, no
+ * una situación válida: si el salón se divide, eso se modela como espacios
+ * distintos. Se bloquea en vez de avisar porque un aviso posterior llega tarde
+ * — el organizador ya le prometió la fecha al anfitrión.
+ *
+ * Se valida acá, en la acción, y no solo en el formulario: la acción es un
+ * endpoint invocable directamente.
+ */
+async function scheduleBlocker(
+  input: EventInput,
+  excludeEventId?: string,
+): Promise<string | null> {
+  // Un evento cancelado no ocupa nada, así que tampoco puede chocar.
+  if (!input.spaceId || input.status === EventStatus.CANCELLED) return null;
+
+  const candidate = {
+    eventDate: parseEventDate(input.eventDate),
+    startTime: input.startTime,
+    endTime: input.endTime,
+  };
+
+  const conflicts = await findScheduleConflicts({
+    spaceId: input.spaceId,
+    event: candidate,
+    excludeEventId,
+  });
+
+  if (conflicts.length === 0) return null;
+
+  const space = await prisma.space.findUnique({
+    where: { id: input.spaceId },
+    select: { name: true },
+  });
+
+  return describeScheduleConflicts(conflicts, space?.name ?? "seleccionado");
+}
 
 export async function createEventAction(
   _prev: FormState,
@@ -27,10 +76,14 @@ export async function createEventAction(
 
   const parsed = eventInputFromFormData(formData);
   if (!parsed.success) {
-    return { fieldErrors: fieldErrorsFrom(parsed.error) };
+    return { values: collectValues(formData), fieldErrors: fieldErrorsFrom(parsed.error) };
   }
 
   const input = parsed.data;
+
+  const blocked = await scheduleBlocker(input);
+  if (blocked) return { values: collectValues(formData), error: blocked };
+
   let eventId: string;
 
   try {
@@ -44,6 +97,8 @@ export async function createEventAction(
           location: input.location,
           notes: input.notes,
           status: input.status,
+          spaceId: input.spaceId,
+          maxGuests: input.maxGuests,
           createdById: user.id,
         },
         select: { id: true, name: true },
@@ -63,7 +118,7 @@ export async function createEventAction(
     eventId = event.id;
   } catch (error) {
     console.error("createEventAction", error);
-    return { error: "No se pudo crear el evento. Intentá de nuevo." };
+    return { values: collectValues(formData), error: "No se pudo crear el evento. Intentá de nuevo." };
   }
 
   revalidatePath("/panel");
@@ -81,10 +136,14 @@ export async function updateEventAction(
 
   const parsed = eventInputFromFormData(formData);
   if (!parsed.success) {
-    return { fieldErrors: fieldErrorsFrom(parsed.error) };
+    return { values: collectValues(formData), fieldErrors: fieldErrorsFrom(parsed.error) };
   }
 
   const input = parsed.data;
+
+  // Se excluye a sí mismo: un evento no choca consigo mismo al editarlo.
+  const blocked = await scheduleBlocker(input, eventId);
+  if (blocked) return { values: collectValues(formData), error: blocked };
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -98,6 +157,8 @@ export async function updateEventAction(
           location: input.location,
           notes: input.notes,
           status: input.status,
+          spaceId: input.spaceId,
+          maxGuests: input.maxGuests,
         },
         // No necesitamos la fila de vuelta. Sin select, Prisma pide todas las
         // columnas y la query se rompe ante cualquier desfasaje entre el
@@ -115,7 +176,7 @@ export async function updateEventAction(
     });
   } catch (error) {
     console.error("updateEventAction", error);
-    return { error: "No se pudo guardar el evento. Intentá de nuevo." };
+    return { values: collectValues(formData), error: "No se pudo guardar el evento. Intentá de nuevo." };
   }
 
   revalidatePath("/panel");

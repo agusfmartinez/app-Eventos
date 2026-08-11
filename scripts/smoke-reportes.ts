@@ -13,9 +13,7 @@ import { PrismaClient } from "../lib/generated/prisma/client";
 import { InvitationStatus, Role } from "../lib/generated/prisma/enums";
 import { generateInvitationToken, generateShortCode } from "../lib/tokens";
 
-const BASE = process.env.APP_URL?.startsWith("http")
-  ? process.env.APP_URL
-  : "http://localhost:3000";
+const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000";
 const MARKER = `SMOKEREP-${Date.now()}`;
 const DOOR_EMAIL = `puerta-rep-${Date.now()}@smoke.local`;
 const DOOR_PASSWORD = "puerta12345";

@@ -69,6 +69,32 @@ model User {
 }
 
 // ============================================================
+// Espacios del salón
+// ============================================================
+
+/// Sub-salones o ambientes del mismo salón.
+///
+/// NO es multi-tenant: sigue habiendo un solo salón. Esto es un catálogo de
+/// ambientes que se alquilan por separado y pueden tener eventos simultáneos.
+model Space {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+  /// Capacidad física del ambiente. Propone el cupo por defecto del evento.
+  capacity Int?
+  notes    String?
+  /// Los espacios no se borran: se desactivan. Borrarlos dejaría eventos
+  /// pasados sin ambiente y rompería el historial.
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  events Event[]
+
+  @@map("spaces")
+}
+
+// ============================================================
 // Eventos
 // ============================================================
 
@@ -89,11 +115,23 @@ model Event {
   notes    String?
   status   EventStatus @default(DRAFT)
 
+  /// Ambiente del salón donde se hace. Nullable: eventos cargados antes de
+  /// que existieran los espacios, o eventos que ocupan todo el salón.
+  spaceId String? @map("space_id") @db.Uuid
+
+  /// Cupo de personas pactado con el anfitrión. Se propone desde la capacidad
+  /// del espacio y se puede bajar.
+  ///
+  /// Es un acuerdo comercial, no un límite físico exacto: la aplicación avisa
+  /// cuando se supera, pero no bloquea el alta de invitados.
+  maxGuests Int? @map("max_guests")
+
   createdById String?  @map("created_by") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   createdBy   User?        @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  space       Space?       @relation(fields: [spaceId], references: [id], onDelete: SetNull)
   guests      Guest[]
   invitations Invitation[]
   staff       EventStaff[]
@@ -101,6 +139,8 @@ model Event {
 
   @@index([eventDate])
   @@index([status])
+  /// El calendario consulta "qué hay en este espacio en estas fechas".
+  @@index([spaceId, eventDate])
   @@map("events")
 }
 

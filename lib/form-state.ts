@@ -11,9 +11,35 @@ export type FormState = {
   ok?: boolean;
   error?: string;
   fieldErrors?: Record<string, string>;
+  /**
+   * Lo que el usuario había escrito, devuelto tal cual.
+   *
+   * React 19 resetea los formularios no controlados cuando termina una acción.
+   * Sin esto, cualquier error de validación le borra al usuario todo lo que
+   * venía cargando — y en el formulario de evento eso son diez campos.
+   *
+   * Los formularios leen de acá antes que de sus valores por defecto.
+   */
+  values?: Record<string, string>;
 };
 
 export const emptyFormState: FormState = {};
+
+/**
+ * Copia los campos de texto del formulario para poder repoblarlo si falla.
+ *
+ * Los checkbox sin marcar no viajan en el FormData: su ausencia significa
+ * "desmarcado". Por eso los formularios tienen que preguntar si `values`
+ * existe antes de decidir el estado de un checkbox, en vez de mirar solo si la
+ * clave está.
+ */
+export function collectValues(formData: FormData): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === "string") out[key] = value;
+  }
+  return out;
+}
 
 export function fieldErrorsFrom(error: ZodError): Record<string, string> {
   const out: Record<string, string> = {};

@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache";
 import { recordAudit } from "@/lib/audit";
 import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
-import { fieldErrorsFrom, type FormState } from "@/lib/form-state";
+import {
+  collectValues,
+  fieldErrorsFrom,
+  type FormState,
+} from "@/lib/form-state";
 import { InvitationStatus } from "@/lib/generated/prisma/enums";
 import { generateInvitationToken, generateShortCode } from "@/lib/tokens";
 import { guestInputFromFormData } from "@/lib/validators/guest";
@@ -30,7 +34,7 @@ export async function createGuestAction(
 
   const parsed = guestInputFromFormData(formData);
   if (!parsed.success) {
-    return { fieldErrors: fieldErrorsFrom(parsed.error) };
+    return { values: collectValues(formData), fieldErrors: fieldErrorsFrom(parsed.error) };
   }
 
   const input = parsed.data;
@@ -91,11 +95,11 @@ export async function createGuestAction(
       if (isCodeCollision && attempt < 4) continue;
 
       console.error("createGuestAction", error);
-      return { error: "No se pudo agregar el invitado. Intentá de nuevo." };
+      return { values: collectValues(formData), error: "No se pudo agregar el invitado. Intentá de nuevo." };
     }
   }
 
-  return { error: "No se pudo generar un código único. Intentá de nuevo." };
+  return { values: collectValues(formData), error: "No se pudo generar un código único. Intentá de nuevo." };
 }
 
 export async function updateGuestAction(
@@ -107,7 +111,7 @@ export async function updateGuestAction(
 
   const parsed = guestInputFromFormData(formData);
   if (!parsed.success) {
-    return { fieldErrors: fieldErrorsFrom(parsed.error) };
+    return { values: collectValues(formData), fieldErrors: fieldErrorsFrom(parsed.error) };
   }
 
   const input = parsed.data;
@@ -129,6 +133,7 @@ export async function updateGuestAction(
   const entered = guest.invitation?.enteredCount ?? 0;
   if (input.maxPeople < entered) {
     return {
+      values: collectValues(formData),
       fieldErrors: {
         maxPeople: `Ya ingresaron ${entered} personas con esta invitación: no se puede bajar el cupo por debajo de ese número.`,
       },
@@ -174,7 +179,7 @@ export async function updateGuestAction(
     });
   } catch (error) {
     console.error("updateGuestAction", error);
-    return { error: "No se pudo guardar el invitado. Intentá de nuevo." };
+    return { values: collectValues(formData), error: "No se pudo guardar el invitado. Intentá de nuevo." };
   }
 
   refreshEvent(guest.eventId);

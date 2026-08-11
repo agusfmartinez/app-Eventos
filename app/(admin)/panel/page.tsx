@@ -27,6 +27,7 @@ const statusTone = {
 type EventRow = {
   id: string;
   name: string;
+  spaceName: string | null;
   eventDate: Date;
   startTime: string | null;
   status: EventStatus;
@@ -44,6 +45,7 @@ function EventCard({ event }: { event: EventRow }) {
         <div className="min-w-0">
           <p className="truncate font-medium">{event.name}</p>
           <p className="mt-0.5 text-sm text-muted">
+            {event.spaceName ? `${event.spaceName} · ` : ""}
             {formatEventDateShort(event.eventDate)}
             {event.startTime ? ` · ${event.startTime} hs` : ""}
           </p>
@@ -92,6 +94,7 @@ export default async function PanelPage() {
       select: {
         id: true,
         name: true,
+        space: { select: { name: true } },
         eventDate: true,
         startTime: true,
         status: true,
@@ -112,6 +115,7 @@ export default async function PanelPage() {
   const rows: EventRow[] = events.map((e) => ({
     id: e.id,
     name: e.name,
+    spaceName: e.space?.name ?? null,
     eventDate: e.eventDate,
     startTime: e.startTime,
     status: e.status,

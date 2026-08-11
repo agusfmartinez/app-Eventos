@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { toDateInputValue } from "@/lib/format";
 
 export const metadata = { title: "Editar evento" };
+export const dynamic = "force-dynamic";
 
 export default async function EditarEventoPage({
   params,
@@ -19,22 +20,39 @@ export default async function EditarEventoPage({
   await requireAdminOrOrganizer();
   const { id } = await params;
 
-  const event = await prisma.event.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      name: true,
-      eventDate: true,
-      startTime: true,
-      endTime: true,
-      location: true,
-      notes: true,
-      status: true,
-      _count: { select: { guests: true, checkIns: true } },
-    },
-  });
+  const [event, activeSpaces] = await Promise.all([
+    prisma.event.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        eventDate: true,
+        startTime: true,
+        endTime: true,
+        location: true,
+        notes: true,
+        status: true,
+        spaceId: true,
+        maxGuests: true,
+        space: { select: { id: true, name: true, capacity: true } },
+        _count: { select: { guests: true, checkIns: true } },
+      },
+    }),
+    prisma.space.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, capacity: true },
+    }),
+  ]);
 
   if (!event) notFound();
+
+  // El espacio actual se agrega aunque esté desactivado: si no apareciera en
+  // el selector, editar cualquier otro campo borraría la asignación al guardar.
+  const spaces = [...activeSpaces];
+  if (event.space && !spaces.some((s) => s.id === event.space!.id)) {
+    spaces.push(event.space);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,9 +61,12 @@ export default async function EditarEventoPage({
       <Card className="p-5">
         <EventForm
           action={updateEventAction.bind(null, event.id)}
+          spaces={spaces}
           submitLabel="Guardar cambios"
           defaultValues={{
             name: event.name,
+            spaceId: event.spaceId ?? "",
+            maxGuests: event.maxGuests?.toString() ?? "",
             eventDate: toDateInputValue(event.eventDate),
             startTime: event.startTime ?? "",
             endTime: event.endTime ?? "",

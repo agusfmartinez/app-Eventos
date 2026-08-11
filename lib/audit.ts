@@ -11,6 +11,8 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 type AuditClient = Pick<typeof prisma, "auditLog">;
 
 export type AuditAction =
+  | "space.create"
+  | "space.update"
   | "event.create"
   | "event.update"
   | "event.delete"

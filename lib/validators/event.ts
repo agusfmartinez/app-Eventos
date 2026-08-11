@@ -39,6 +39,22 @@ export const eventInputSchema = z.object({
   location: optionalText(200),
   notes: optionalText(2000),
   status: z.enum(EventStatus),
+  spaceId: z
+    .string()
+    .trim()
+    .nullable()
+    .transform((v) => (v === "" || v === null ? null : v)),
+  /// Cupo pactado. Se avisa al superarlo, no se bloquea: es un acuerdo
+  /// comercial, no un límite físico exacto.
+  maxGuests: z
+    .string()
+    .trim()
+    .nullable()
+    .transform((v) => (v === "" || v === null ? null : Number(v)))
+    .refine(
+      (v) => v === null || (Number.isInteger(v) && v > 0 && v <= 100_000),
+      "El cupo tiene que ser un número entero mayor a cero.",
+    ),
 });
 
 export type EventInput = z.infer<typeof eventInputSchema>;
@@ -61,5 +77,7 @@ export function eventInputFromFormData(formData: FormData) {
     location: formData.get("location") ?? null,
     notes: formData.get("notes") ?? null,
     status: formData.get("status") ?? EventStatus.DRAFT,
+    spaceId: formData.get("spaceId") ?? null,
+    maxGuests: formData.get("maxGuests") ?? null,
   });
 }
