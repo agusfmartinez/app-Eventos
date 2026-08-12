@@ -3,10 +3,12 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, LayoutDashboard } from "lucide-react";
 
 import { Scanner } from "@/components/scanner/scanner";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { requireEventAccess } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { formatEventDateShort } from "@/lib/format";
 import { Role } from "@/lib/generated/prisma/enums";
+import { getAssignedStation } from "@/lib/staff";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,10 @@ export default async function ControlEventoPage({
 
   if (!event) notFound();
 
+  // El puesto sale de la asignación, no del dispositivo: quien escanea ve
+  // dónde lo pusieron, no lo elige.
+  const stationLabel = await getAssignedStation(eventId, user.id);
+
   return (
     <main className="flex flex-1 flex-col">
       <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3">
@@ -41,7 +47,6 @@ export default async function ControlEventoPage({
           className="flex shrink-0 items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted"
         >
           <ArrowLeft size={15} />
-          Cambiar
         </Link>
 
         <div className="min-w-0 flex-1">
@@ -51,6 +56,8 @@ export default async function ControlEventoPage({
             {event.startTime ? ` · ${event.startTime} hs` : ""}
           </p>
         </div>
+
+        <ThemeToggle />
 
         {canManage ? (
           <Link
@@ -64,7 +71,11 @@ export default async function ControlEventoPage({
       </header>
 
       <div className="mx-auto w-full max-w-md flex-1 p-4">
-        <Scanner eventId={event.id} eventName={event.name} />
+        <Scanner
+          eventId={event.id}
+          eventName={event.name}
+          stationLabel={stationLabel}
+        />
       </div>
     </main>
   );

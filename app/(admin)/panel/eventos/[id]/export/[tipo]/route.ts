@@ -1,7 +1,11 @@
 import { buildCsv, csvFileName, csvResponse } from "@/lib/csv";
 import { getCurrentUser } from "@/lib/authz";
 import { prisma } from "@/lib/db";
-import { formatDateTime, formatEventDateShort } from "@/lib/format";
+import {
+  formatDateTime,
+  formatEventDateShort,
+  personFullName,
+} from "@/lib/format";
 import { Role } from "@/lib/generated/prisma/enums";
 import { deriveStatus, STATUS_LABELS } from "@/lib/invitation-status";
 
@@ -90,7 +94,7 @@ export async function GET(
         stationLabel: true,
         guest: { select: { firstName: true, lastName: true, phone: true } },
         invitation: { select: { shortCode: true } },
-        operator: { select: { fullName: true } },
+        operator: { select: { firstName: true, lastName: true } },
       },
     });
 
@@ -113,7 +117,7 @@ export async function GET(
         c.peopleCount,
         c.invitation.shortCode,
         c.stationLabel ?? "",
-        c.operator?.fullName ?? "",
+        c.operator ? personFullName(c.operator) : "",
       ]),
     );
 

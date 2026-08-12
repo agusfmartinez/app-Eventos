@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { recordAudit } from "@/lib/audit";
-import { requireAdminOrOrganizer } from "@/lib/authz";
+import { requireAdmin, requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import {
   collectValues,
@@ -224,16 +224,19 @@ export async function publishEventAction(eventId: string): Promise<FormState> {
 /**
  * Borrado real, con cascada a invitados, invitaciones y check-ins.
  *
- * Se exige tipear el nombre del evento porque borrar uno con la fiesta ya
- * hecha destruye el historial de ingresos. Para cancelar un evento sin perder
- * nada está el estado CANCELLED.
+ * **Solo administradores.** Es la única operación que destruye historial de
+ * ingresos, y un organizador no debería poder borrar la prueba de quién entró
+ * a una fiesta. Para dar de baja un evento sin perder nada está el estado
+ * CANCELLED, que sí puede usar cualquiera que administre eventos.
+ *
+ * Además se exige tipear el nombre del evento como confirmación.
  */
 export async function deleteEventAction(
   eventId: string,
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const user = await requireAdminOrOrganizer();
+  const user = await requireAdmin();
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { BrowserQRCodeReader } from "@zxing/browser";
 import type { IScannerControls } from "@zxing/browser";
-import { Camera, CameraOff, Keyboard, Minus, Plus } from "lucide-react";
+import { Camera, CameraOff, DoorOpen, Keyboard, Minus, Plus } from "lucide-react";
 
 import { ResultStamp } from "@/components/scanner/result-stamp";
 import {
@@ -30,8 +30,6 @@ const AUTO_RESUME_MS = 2500;
 // Ignora el mismo código si se relee enseguida. Sin esto, la cámara dispara
 // varias veces sobre el mismo QR mientras el invitado lo sostiene.
 const DUPLICATE_WINDOW_MS = 6000;
-
-const STATION_STORAGE_KEY = "control-acceso:puesto";
 
 /** Apaga la cámara de verdad: sin esto el led del dispositivo queda prendido. */
 function stopTracks(stream: MediaStream | null) {
@@ -130,9 +128,12 @@ type Phase =
 export function Scanner({
   eventId,
   eventName,
+  stationLabel,
 }: {
   eventId: string;
   eventName: string;
+  /** Puesto asignado por quien armó el evento. Null si no le pusieron uno. */
+  stationLabel: string | null;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
@@ -159,32 +160,12 @@ export function Scanner({
     setLogs((prev) => [...prev, `${stamp}  ${message}`]);
   }, []);
 
-  /**
-   * El puesto ("Puerta 1") queda guardado por dispositivo: se escribe una vez
-   * por noche y después viaja en cada check-in.
-   *
-   * Va sin estado de React a propósito. localStorage no existe durante el
-   * render del servidor, así que sincronizarlo con useState obligaría a un
-   * setState dentro de un efecto —que React 19 desaconseja— y provocaría un
-   * render extra. Un input no controlado resuelve lo mismo sin nada de eso.
-   */
-  const stationRef = useRef<HTMLInputElement>(null);
-
   const stopStream = useCallback(() => {
     controlsRef.current?.stop();
     controlsRef.current = null;
     stopTracks(streamRef.current);
     streamRef.current = null;
   }, []);
-
-  function initStationInput(el: HTMLInputElement | null) {
-    if (el && !el.value) el.value = localStorage.getItem(STATION_STORAGE_KEY) ?? "";
-    stationRef.current = el;
-  }
-
-  function persistStation(value: string) {
-    localStorage.setItem(STATION_STORAGE_KEY, value);
-  }
 
   const handleCode = useCallback(
     (code: string) => {
@@ -337,12 +318,7 @@ export function Scanner({
 
   function confirm(code: string) {
     startTransition(async () => {
-      const result = await confirmCheckInAction(
-        eventId,
-        code,
-        people,
-        stationRef.current?.value.trim() || null,
-      );
+      const result = await confirmCheckInAction(eventId, code, people);
       setPhase({ kind: "result", result, code });
 
       if (result.result === "OK") {
@@ -505,7 +481,7 @@ export function Scanner({
         </ResultStamp>
       ) : null}
 
-      {/* Respaldo manual y puesto */}
+      {/* Respaldo manual, diagnóstico y puesto */}
       {!showingResult ? (
         <div className="flex flex-col gap-3">
           {manualOpen ? (
@@ -520,7 +496,7 @@ export function Scanner({
                 id="manual"
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                placeholder="ABCD2345"
+                placeholder=""
                 autoCapitalize="characters"
                 autoComplete="off"
                 className="rounded-lg border border-border px-3 py-3 text-center font-mono text-xl tracking-widest uppercase"
@@ -545,7 +521,7 @@ export function Scanner({
               className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium"
             >
               <Keyboard size={16} />
-              El QR no se lee — ingresar código
+              Ingresar código manual
             </button>
           )}
 
@@ -573,26 +549,15 @@ export function Scanner({
             </div>
           </details>
 
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor="station"
-              className="flex items-center gap-2 text-sm text-muted"
-            >
-              <span className="shrink-0">Puesto:</span>
-              <input
-                id="station"
-                ref={initStationInput}
-                onChange={(e) => persistStation(e.target.value)}
-                placeholder="Puerta 1"
-                className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-foreground"
-              />
-            </label>
-            <p className="text-xs text-muted">
-              Opcional. Si el salón tiene más de una entrada, poné cuál es esta
-              y el historial va a mostrar por dónde entró cada invitado. Con una
-              sola puerta, dejalo vacío.
+          {/* El puesto lo define quien arma el evento. Acá solo se informa:
+              antes se escribía en cada teléfono, y alcanzaba con un typo para
+              que el historial mostrara dos puertas donde había una. */}
+          {stationLabel ? (
+            <p className="flex items-center gap-2 text-sm text-muted">
+              <DoorOpen size={15} className="shrink-0" />
+              Estás en <span className="font-medium">{stationLabel}</span>
             </p>
-          </div>
+          ) : null}
         </div>
       ) : null}
     </div>

@@ -15,7 +15,7 @@ import { generateInvitationToken, generateShortCode } from "../lib/tokens";
 
 const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000";
 const MARKER = `SMOKEREP-${Date.now()}`;
-const DOOR_EMAIL = `puerta-rep-${Date.now()}@smoke.local`;
+const DOOR_USERNAME = `TESTREP${Date.now()}`;
 const DOOR_PASSWORD = "puerta12345";
 
 const prisma = new PrismaClient({
@@ -47,14 +47,14 @@ function makeJar() {
     return res;
   }
 
-  async function login(email: string, password: string) {
+  async function login(username: string, password: string) {
     const { csrfToken } = (await (await req("/api/auth/csrf")).json()) as {
       csrfToken: string;
     };
     await req("/api/auth/callback/credentials", {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ csrfToken, email, password }).toString(),
+      body: new URLSearchParams({ csrfToken, username, password }).toString(),
     });
     return [...jar.keys()].some((k) => k.includes("session-token"));
   }
@@ -137,7 +137,7 @@ async function run() {
   check(
     "el admin inicia sesión",
     await session.login(
-      process.env.SEED_ADMIN_EMAIL ?? "admin@salon.local",
+      process.env.SEED_ADMIN_USERNAME ?? "ASALON",
       process.env.SEED_ADMIN_PASSWORD ?? "admin1234",
     ),
   );
@@ -249,10 +249,14 @@ async function run() {
   // ---------- permisos ----------
   const door = await prisma.user.create({
     data: {
-      email: DOOR_EMAIL,
+      username: DOOR_USERNAME,
       passwordHash: await hash(DOOR_PASSWORD),
-      fullName: `Operador ${MARKER}`,
+      firstName: "Operador",
+      lastName: MARKER,
       role: Role.DOOR,
+      // Si quedara en true, el login lo mandaría a cambiar la contraseña y
+      // el test no llegaría a probar nada.
+      mustChangePassword: false,
     },
     select: { id: true },
   });
@@ -262,7 +266,7 @@ async function run() {
   });
 
   const doorSession = makeJar();
-  await doorSession.login(DOOR_EMAIL, DOOR_PASSWORD);
+  await doorSession.login(DOOR_USERNAME, DOOR_PASSWORD);
 
   res = await doorSession.req(`/panel/eventos/${event.id}/export/invitados`);
   check(
@@ -293,7 +297,7 @@ async function run() {
 
 async function cleanup() {
   await prisma.event.deleteMany({ where: { name: { startsWith: MARKER } } });
-  await prisma.user.deleteMany({ where: { email: DOOR_EMAIL } });
+  await prisma.user.deleteMany({ where: { username: DOOR_USERNAME } });
 }
 
 async function main() {

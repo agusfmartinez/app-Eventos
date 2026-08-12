@@ -297,7 +297,7 @@ Esfuerzo: medio. Es la que **destraba el punto A**.
 | ~~6~~ | ~~Importación CSV~~ | — | **Descartada.** La carga masiva va a resolverse con el formulario de registro |
 | ✅ **6** | Espacios / sub-salones + cupo del evento (**B**) | chico | **Hecha.** Incluye `lib/schedule.ts`, la base de cálculo que va a usar el calendario |
 | ✅ **7** | Calendario de disponibilidad (**D**) | medio | **Hecha.** Vista mes y vista día por espacio, con ventana anclada a las 08:00 |
-| **8** | Usuarios y asignación de recepción (**E**) | medio | Saca el SQL a mano y destraba la siguiente |
+| ✅ **8** | Usuarios y asignación de recepción (**E**) | medio | **Hecha.** ABM de cuentas solo para admins, asignación por evento con puesto |
 | **9** | Escaneo sin elegir evento (**A**) | medio | Necesita la 8 para el filtro de acceso; luce mejor con la 6 |
 | **10** | Formulario de registro de invitados (**C**) | medio-alto | Lo más grande y lo único que abre escritura al público |
 | **11** | WhatsApp Business API | medio | Como estaba: opcional |

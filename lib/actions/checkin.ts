@@ -10,6 +10,7 @@ import {
   resolveShortCode,
   type CheckInResult,
 } from "@/lib/checkin";
+import { getAssignedStation } from "@/lib/staff";
 
 /**
  * Toda acción del scanner arranca con requireEventAccess: un operador del rol
@@ -32,7 +33,6 @@ export async function confirmCheckInAction(
   eventId: string,
   scanned: string,
   people: number,
-  stationLabel: string | null,
 ): Promise<CheckInResult> {
   const user = await requireEventAccess(eventId);
 
@@ -41,9 +41,9 @@ export async function confirmCheckInAction(
     eventId,
     people,
     operatorId: user.id,
-    // Etiqueta libre del puesto ("Puerta 1"). Se acota para que nadie meta
-    // media novela en el historial.
-    stationLabel: stationLabel?.trim().slice(0, 60) || null,
+    // El puesto sale de la asignación del evento, no de lo que mande el
+    // cliente: es un dato del historial y quien escanea no lo elige.
+    stationLabel: await getAssignedStation(eventId, user.id),
   });
 
   if (result.result === "OK") {

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/field";
 import { Card, EmptyState, PageHeader } from "@/components/ui/misc";
 import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
-import { formatDateTime, guestFullName } from "@/lib/format";
+import { formatDateTime, personFullName } from "@/lib/format";
 import { digitsOnly } from "@/lib/validators/guest";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +64,7 @@ export default async function IngresosPage({
         createdAt: true,
         stationLabel: true,
         guest: { select: { id: true, firstName: true, lastName: true } },
-        operator: { select: { fullName: true } },
+        operator: { select: { firstName: true, lastName: true } },
       },
     }),
     prisma.checkIn.count({ where }),
@@ -106,7 +106,6 @@ export default async function IngresosPage({
             </ButtonLink>
             <ButtonLink href={`/panel/eventos/${id}`} variant="secondary">
               <ArrowLeft size={16} />
-              Volver
             </ButtonLink>
           </>
         }
@@ -163,7 +162,7 @@ export default async function IngresosPage({
                   href={`/panel/eventos/${id}/invitados/${checkIn.guest.id}`}
                   className="min-w-0 flex-1 font-medium hover:text-brand"
                 >
-                  {guestFullName(checkIn.guest)}
+                  {personFullName(checkIn.guest)}
                 </Link>
 
                 <span className="tabular-nums">
@@ -177,7 +176,9 @@ export default async function IngresosPage({
 
                 <span className="text-muted">
                   {checkIn.stationLabel ?? "—"}
-                  {checkIn.operator ? ` · ${checkIn.operator.fullName}` : ""}
+                  {checkIn.operator
+                    ? ` · ${personFullName(checkIn.operator)}`
+                    : ""}
                 </span>
               </div>
             ))}

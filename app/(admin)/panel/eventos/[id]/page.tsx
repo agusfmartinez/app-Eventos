@@ -12,6 +12,7 @@ import {
 
 import { DraftBanner } from "@/components/events/draft-banner";
 import { EventDashboard } from "@/components/events/event-dashboard";
+import { EventStaffPanel } from "@/components/events/event-staff-panel";
 import {
   CapacityWarning,
   ScheduleConflictWarning,
@@ -28,7 +29,7 @@ import {
   EVENT_STATUS_LABELS,
   formatEventDate,
   formatPhone,
-  guestFullName,
+  personFullName,
 } from "@/lib/format";
 import {
   deriveStatus,
@@ -36,6 +37,7 @@ import {
   STATUS_TONES,
 } from "@/lib/invitation-status";
 import { findScheduleConflicts } from "@/lib/schedule";
+import { listAssignableStaff, listEventStaff } from "@/lib/staff";
 import { getEventStats, getHourlyEntries } from "@/lib/stats";
 import { digitsOnly } from "@/lib/validators/guest";
 
@@ -72,11 +74,15 @@ export default async function EventoPage({
 
   if (!event) notFound();
 
-  const conflicts = await findScheduleConflicts({
-    spaceId: event.spaceId,
-    event,
-    excludeEventId: event.id,
-  });
+  const [conflicts, assignedStaff, staffCandidates] = await Promise.all([
+    findScheduleConflicts({
+      spaceId: event.spaceId,
+      event,
+      excludeEventId: event.id,
+    }),
+    listEventStaff(id),
+    listAssignableStaff(id),
+  ]);
 
   // Busca por nombre, apellido o teléfono. El teléfono se guarda solo con
   // dígitos, así que la consulta normaliza lo que el usuario tipeó.
@@ -195,28 +201,33 @@ export default async function EventoPage({
 
       <EventDashboard stats={stats} hourly={hourly} />
 
-      <AddGuestPanel action={createGuestAction.bind(null, event.id)} />
+      <EventStaffPanel
+        eventId={event.id}
+        assigned={assignedStaff}
+        candidates={staffCandidates}
+      />
 
       <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-semibold">Invitados</h2>
-
-          <form className="flex items-center gap-2">
-            <div className="relative">
-              <Search
-                size={15}
-                className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted"
-              />
-              <Input
-                name="q"
-                defaultValue={query}
-                placeholder="Buscar por nombre o teléfono"
-                className="w-64 pl-8"
-                aria-label="Buscar invitados"
-              />
-            </div>
-          </form>
-        </div>
+        <AddGuestPanel
+          action={createGuestAction.bind(null, event.id)}
+          search={
+            <form className="flex items-center gap-2">
+              <div className="relative">
+                <Search
+                  size={15}
+                  className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted"
+                />
+                <Input
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Buscar por nombre o teléfono"
+                  className="w-64 pl-8"
+                  aria-label="Buscar invitados"
+                />
+              </div>
+            </form>
+          }
+        />
 
         {guests.length === 0 ? (
           <EmptyState
@@ -258,7 +269,7 @@ export default async function EventoPage({
                       href={`/panel/eventos/${event.id}/invitados/${guest.id}`}
                       className="font-medium hover:text-brand"
                     >
-                      {guestFullName(guest)}
+                      {personFullName(guest)}
                     </Link>
                     <p className="text-sm text-muted">
                       {formatPhone(guest.phone)}
@@ -284,7 +295,7 @@ export default async function EventoPage({
                   {inv ? (
                     <GuestActions
                       guestId={guest.id}
-                      guestName={guestFullName(guest)}
+                      guestName={personFullName(guest)}
                       status={inv.status}
                     />
                   ) : null}

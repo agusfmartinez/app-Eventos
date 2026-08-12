@@ -115,7 +115,7 @@ export function EventForm({
           name="name"
           defaultValue={v.name}
           error={err.name}
-          placeholder="Casamiento Juan & María"
+          placeholder=""
           autoFocus
         />
       </Field>
@@ -124,7 +124,7 @@ export function EventForm({
         label="Estado"
         htmlFor="status"
         error={err.status}
-        hint="Solo los eventos publicados o en curso aparecen en el control de acceso."
+        hint=""
       >
         <Select
           id="status"
@@ -171,7 +171,7 @@ export function EventForm({
           label="Hora de fin"
           htmlFor="endTime"
           error={err.endTime}
-          hint="Puede ser de madrugada."
+          hint=""
         >
           <Input
             id="endTime"
@@ -188,11 +188,7 @@ export function EventForm({
           label="Espacio"
           htmlFor="spaceId"
           error={err.spaceId}
-          hint={
-            spaces.length > 0
-              ? "Sub-salón donde se hace. Se usa para detectar dobles reservas."
-              : "Todavía no hay espacios cargados. Se administran en Espacios."
-          }
+          hint=""
         >
           <Select
             id="spaceId"
@@ -207,7 +203,7 @@ export function EventForm({
             {spaces.map((space) => (
               <option key={space.id} value={space.id}>
                 {space.name}
-                {space.capacity ? ` (hasta ${space.capacity})` : ""}
+                {space.capacity ? ` (capacidad ${space.capacity})` : ""}
               </option>
             ))}
           </Select>
@@ -217,7 +213,7 @@ export function EventForm({
           label="Cupo de invitados"
           htmlFor="maxGuests"
           error={err.maxGuests}
-          hint="Personas pactadas con el anfitrión. Solo avisa al superarlo."
+          hint=""
         >
           <Input
             id="maxGuests"
@@ -227,7 +223,7 @@ export function EventForm({
             ref={maxGuestsRef}
             defaultValue={v.maxGuests}
             error={err.maxGuests}
-            placeholder="150"
+            placeholder=""
           />
         </Field>
       </div>
@@ -241,13 +237,13 @@ export function EventForm({
         Ver disponibilidad de esa fecha
       </button>
 
-      <Field label="Ubicación" htmlFor="location" error={err.location}>
+      <Field label="Dirección" htmlFor="location" error={err.location}>
         <Input
           id="location"
           name="location"
           defaultValue={v.location}
           error={err.location}
-          placeholder="Salón principal"
+          placeholder=""
         />
       </Field>
 
@@ -255,7 +251,7 @@ export function EventForm({
         label="Información adicional"
         htmlFor="notes"
         error={err.notes}
-        hint="Notas internas para el personal del salón."
+        hint=""
       >
         <Textarea
           id="notes"

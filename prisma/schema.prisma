@@ -50,15 +50,30 @@ enum InvitationStatus {
 
 /// Las cuentas las crea un admin. No hay registro público.
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  fullName     String   @map("full_name")
-  role         Role     @default(DOOR)
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Con lo que se inicia sesión. Se genera de la inicial del nombre más el
+  /// apellido: Agustín Martínez → AMARTINEZ. Ver lib/username.ts.
+  username String @unique
+
+  firstName String @map("first_name")
+  lastName  String @map("last_name")
+
+  /// Contacto, opcional. No se usa para iniciar sesión.
+  email String? @unique
+
+  passwordHash String @map("password_hash")
+
+  /// La cuenta arranca con una contraseña temporal que genera el sistema y
+  /// que el admin le pasa a la persona. Hasta que la cambie, la aplicación la
+  /// manda siempre a la pantalla de cambio de contraseña.
+  mustChangePassword Boolean @default(true) @map("must_change_password")
+
+  role Role @default(DOOR)
   /// false corta el acceso en el próximo request (ver lib/auth.ts)
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   createdEvents Event[]      @relation("EventCreatedBy")
   staffAt       EventStaff[]

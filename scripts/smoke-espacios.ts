@@ -276,7 +276,7 @@ async function run() {
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       csrfToken,
-      email: process.env.SEED_ADMIN_EMAIL ?? "admin@salon.local",
+      username: process.env.SEED_ADMIN_USERNAME ?? "ASALON",
       password: process.env.SEED_ADMIN_PASSWORD ?? "admin1234",
     }).toString(),
   });

@@ -113,7 +113,7 @@ export function GuestForm({
             inputMode="tel"
             defaultValue={v.phone}
             error={err.phone}
-            placeholder="1122334455"
+            placeholder=""
           />
         </Field>
 

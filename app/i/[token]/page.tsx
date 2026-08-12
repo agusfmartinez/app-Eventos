@@ -17,9 +17,22 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 };
 
+/**
+ * La invitación va siempre en tema claro, sin importar la preferencia del
+ * dispositivo del invitado.
+ *
+ * Dos motivos: es una tarjeta pensada para sacarle captura y compartirla, y
+ * sobre todo el QR necesita módulos oscuros sobre fondo claro — los lectores
+ * lo esperan así y varios fallan con el patrón invertido.
+ *
+ * Pinta su propio fondo porque el del <body> viene del tema global.
+ */
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
+    <main
+      data-theme="light"
+      className="flex flex-1 items-center justify-center bg-background p-4 text-foreground"
+    >
       <div className="w-full max-w-sm">{children}</div>
     </main>
   );
@@ -141,9 +154,6 @@ export default async function InvitacionPublicaPage({
 
           <p className="mt-2 font-mono text-lg tracking-widest">
             {invitation.shortCode}
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            Si el QR no se lee, dictá este código en el ingreso.
           </p>
         </div>
 

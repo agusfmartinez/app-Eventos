@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarOff, LayoutDashboard, ScanLine } from "lucide-react";
 
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logoutAction } from "@/lib/actions/session";
 import { requireAuth } from "@/lib/authz";
 import { prisma } from "@/lib/db";
@@ -48,6 +49,7 @@ export default async function ControlPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           {!isStaffOnly ? (
             <Link
               href="/panel"

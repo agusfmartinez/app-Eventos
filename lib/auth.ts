@@ -13,7 +13,7 @@ const DUMMY_HASH =
   "$argon2id$v=19$m=19456,t=2,p=1$qoCcrbcKUYppXza506/11g$s2dBdUmlw53nb+/yLGy8TWl0jxj5fKKjmruPRJRTQc8";
 
 const credentialsSchema = z.object({
-  email: z.email(),
+  username: z.string().trim().min(1),
   password: z.string().min(1),
 });
 
@@ -41,15 +41,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        username: { label: "Usuario", type: "text" },
         password: { label: "Contraseña", type: "password" },
       },
       authorize: async (raw) => {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
 
-        const email = parsed.data.email.trim().toLowerCase();
-        const user = await prisma.user.findUnique({ where: { email } });
+        // El username se guarda en mayúsculas; se normaliza para que no
+        // importe cómo lo tipeó la persona.
+        const username = parsed.data.username.toUpperCase();
+        const user = await prisma.user.findUnique({ where: { username } });
 
         const ok = await verify(
           user?.passwordHash ?? DUMMY_HASH,
@@ -62,8 +64,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         return {
           id: user.id,
-          email: user.email,
-          name: user.fullName,
+          email: user.email ?? undefined,
+          name: `${user.firstName} ${user.lastName}`,
           role: user.role,
         };
       },

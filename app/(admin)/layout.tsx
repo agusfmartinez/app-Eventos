@@ -6,10 +6,13 @@ import {
   DoorOpen,
   LogOut,
   ScanLine,
+  Users,
 } from "lucide-react";
 
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logoutAction } from "@/lib/actions/session";
 import { requireAdminOrOrganizer } from "@/lib/authz";
+import { Role } from "@/lib/generated/prisma/enums";
 
 export default async function AdminLayout({
   children,
@@ -51,6 +54,15 @@ export default async function AdminLayout({
               <DoorOpen size={16} />
               Espacios
             </Link>
+            {user.role === Role.ADMIN ? (
+              <Link
+                href="/panel/usuarios"
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-muted hover:bg-background hover:text-foreground"
+              >
+                <Users size={16} />
+                Usuarios
+              </Link>
+            ) : null}
             <Link
               href="/control"
               className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-muted hover:bg-background hover:text-foreground"
@@ -64,6 +76,7 @@ export default async function AdminLayout({
             <span className="hidden text-sm text-muted sm:inline">
               {user.fullName}
             </span>
+            <ThemeToggle />
             <form action={logoutAction}>
               <button
                 type="submit"

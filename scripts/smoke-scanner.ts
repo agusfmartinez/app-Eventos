@@ -18,7 +18,7 @@ import { generateInvitationToken, generateShortCode } from "../lib/tokens";
 
 const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000";
 const MARKER = `SMOKESCAN-${Date.now()}`;
-const DOOR_EMAIL = `puerta-${Date.now()}@smoke.local`;
+const DOOR_USERNAME = `TESTSCAN${Date.now()}`;
 const DOOR_PASSWORD = "puerta12345";
 
 const prisma = new PrismaClient({
@@ -55,14 +55,14 @@ function makeJar() {
     return res;
   }
 
-  async function login(email: string, password: string) {
+  async function login(username: string, password: string) {
     const { csrfToken } = (await (await req("/api/auth/csrf")).json()) as {
       csrfToken: string;
     };
     await req("/api/auth/callback/credentials", {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ csrfToken, email, password }).toString(),
+      body: new URLSearchParams({ csrfToken, username, password }).toString(),
     });
     return [...jar.keys()].some((k) => k.includes("session-token"));
   }
@@ -105,10 +105,12 @@ async function run() {
 
   const door = await prisma.user.create({
     data: {
-      email: DOOR_EMAIL,
+      username: DOOR_USERNAME,
       passwordHash: await hash(DOOR_PASSWORD),
-      fullName: `Operador ${MARKER}`,
+      firstName: "Operador",
+      lastName: MARKER,
       role: Role.DOOR,
+      mustChangePassword: false,
     },
     select: { id: true },
   });
@@ -138,7 +140,7 @@ async function run() {
   const doorSession = makeJar();
   check(
     "el operador de puerta puede iniciar sesión",
-    await doorSession.login(DOOR_EMAIL, DOOR_PASSWORD),
+    await doorSession.login(DOOR_USERNAME, DOOR_PASSWORD),
   );
 
   // 1. la raíz lo manda al scanner, no al panel
@@ -196,7 +198,7 @@ async function run() {
   // --- sesión del admin ---
   const adminSession = makeJar();
   await adminSession.login(
-    process.env.SEED_ADMIN_EMAIL ?? "admin@salon.local",
+    process.env.SEED_ADMIN_USERNAME ?? "ASALON",
     process.env.SEED_ADMIN_PASSWORD ?? "admin1234",
   );
 
@@ -231,7 +233,7 @@ async function run() {
 
 async function cleanup() {
   await prisma.event.deleteMany({ where: { name: { startsWith: MARKER } } });
-  await prisma.user.deleteMany({ where: { email: DOOR_EMAIL } });
+  await prisma.user.deleteMany({ where: { username: DOOR_USERNAME } });
 }
 
 async function main() {

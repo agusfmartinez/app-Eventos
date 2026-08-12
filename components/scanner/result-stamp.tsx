@@ -14,10 +14,18 @@ import type { CheckInResult } from "@/lib/checkin";
 
 type Tone = "ok" | "warn" | "deny";
 
+/**
+ * Colores fijos, iguales en tema claro y oscuro (ver `app/globals.css`).
+ *
+ * El sello es un panel a sangre, así que no compite con el fondo de la página
+ * y no necesita adaptarse. Y el operador tiene que ver siempre el mismo verde
+ * y el mismo rojo: que la señal de "pasa" cambie de tono según cómo esté
+ * configurado cada teléfono es justo lo que hay que evitar en la puerta.
+ */
 const toneStyles: Record<Tone, string> = {
-  ok: "bg-ok text-white",
-  warn: "bg-warn text-white",
-  deny: "bg-deny text-white",
+  ok: "bg-ok-strong text-white",
+  warn: "bg-warn-strong text-white",
+  deny: "bg-deny-strong text-white",
 };
 
 export function stampToneFor(result: CheckInResult): Tone {

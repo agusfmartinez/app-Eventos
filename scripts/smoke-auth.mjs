@@ -13,7 +13,7 @@
 import { execSync } from "node:child_process";
 
 const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000";
-const EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@salon.local";
+const USERNAME = process.env.SEED_ADMIN_USERNAME ?? "ASALON";
 const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "admin1234";
 
 const jar = new Map();
@@ -72,7 +72,7 @@ check("obtiene csrfToken", Boolean(csrfToken));
 
 res = await postForm("/api/auth/callback/credentials", {
   csrfToken,
-  email: EMAIL,
+  username: USERNAME,
   password: "contrasena-incorrecta",
 });
 check(
@@ -83,7 +83,7 @@ check(
 
 res = await postForm("/api/auth/callback/credentials", {
   csrfToken,
-  email: EMAIL,
+  username: USERNAME,
   password: PASSWORD,
 });
 check(
@@ -107,10 +107,10 @@ check(
 );
 
 // La garantía que justifica consultar la base en cada request protegido.
-sql(`UPDATE users SET active = false WHERE email = '${EMAIL}'`);
+sql(`UPDATE users SET active = false WHERE username = '${USERNAME}'`);
 res = await req("/panel");
 const blocked = res.status === 307 && locationOf(res).includes("/login");
-sql(`UPDATE users SET active = true WHERE email = '${EMAIL}'`);
+sql(`UPDATE users SET active = true WHERE username = '${USERNAME}'`);
 
 check(
   "desactivar al usuario corta el acceso con la MISMA cookie",

@@ -27,16 +27,19 @@ export function LoginForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
+        <label htmlFor="username" className="text-sm font-medium">
+          Usuario
         </label>
         <input
-          id="email"
-          name="email"
-          type="email"
+          id="username"
+          name="username"
+          type="text"
           autoComplete="username"
+          autoCapitalize="characters"
+          spellCheck={false}
           required
-          className="rounded-lg border border-border bg-surface px-3 py-3 text-base outline-none focus:border-brand"
+          placeholder=""
+          className="rounded-lg border border-border bg-surface px-3 py-3 text-base uppercase outline-none focus:border-brand"
         />
       </div>
 

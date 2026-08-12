@@ -27,12 +27,40 @@ export const viewport: Viewport = {
   themeColor: "#6d28d9",
 };
 
+/**
+ * Resuelve el tema antes del primer pintado.
+ *
+ * Va como script bloqueante en el <head> a propósito: si el tema se aplicara
+ * después de hidratar, la página aparecería un instante en claro y saltaría a
+ * oscuro. Es corto justamente para que ese bloqueo sea imperceptible.
+ *
+ * Si falla —modo incógnito con almacenamiento bloqueado, por ejemplo— queda el
+ * tema claro, que es un default seguro.
+ */
+const THEME_SCRIPT = `
+try {
+  var t = localStorage.getItem('tema');
+  if (t !== 'dark' && t !== 'light') {
+    t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.dataset.theme = t;
+} catch (e) {
+  document.documentElement.dataset.theme = 'light';
+}
+`.trim();
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // El script de arriba escribe data-theme antes de que React hidrate.
+      // Sin esto, React reporta el atributo como diferencia servidor/cliente.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );

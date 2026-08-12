@@ -1,14 +1,19 @@
 @import "tailwindcss";
 
 /*
- * Paleta fija, sin dark mode automático.
+ * Tema claro y oscuro.
  *
- * El scanner usa color como señal semántica (verde = pasa, rojo = no pasa) y
- * lo mira personal no técnico bajo luz variable. Que el sistema operativo del
- * celular invierta los colores solo sirve para generar dudas en la puerta.
+ * El tema se resuelve antes de pintar, con un script en el <head> que escribe
+ * `data-theme` en el <html> (ver app/layout.tsx). Por eso acá no hace falta
+ * ninguna media query: cuando el CSS se aplica, el atributo ya está puesto.
+ *
+ * `[data-theme="light"]` se declara junto a `:root` para que la invitación
+ * pública pueda forzar el tema claro anidando un contenedor, sin importar la
+ * preferencia del dispositivo.
  */
 
-:root {
+:root,
+[data-theme="light"] {
   --background: #f7f7f8;
   --surface: #ffffff;
   --foreground: #17171a;
@@ -18,13 +23,50 @@
   --brand: #6d28d9;
   --brand-foreground: #ffffff;
 
-  /* Semánticos del control de acceso — punto 16 del brief */
   --ok: #15803d;
   --ok-surface: #dcfce7;
   --warn: #b45309;
   --warn-surface: #fef3c7;
   --deny: #b91c1c;
   --deny-surface: #fee2e2;
+}
+
+[data-theme="dark"] {
+  --background: #0f0f12;
+  --surface: #17171c;
+  --foreground: #ececf1;
+  --muted: #a1a1ad;
+  --border: #2a2a33;
+
+  /* Violeta más claro: el de la paleta clara no despega del fondo oscuro. */
+  --brand: #a78bfa;
+  --brand-foreground: #1a0f2e;
+
+  --ok: #4ade80;
+  --ok-surface: #052e16;
+  --warn: #fbbf24;
+  --warn-surface: #3b2506;
+  --deny: #f87171;
+  --deny-surface: #450a0a;
+}
+
+/*
+ * Colores del sello del control de acceso. IDÉNTICOS en ambos temas.
+ *
+ * El resto de la paleta se adapta porque compite contra el fondo de la página,
+ * pero el sello es un panel a sangre: el fondo detrás no importa. Y el
+ * operador de puerta tiene que ver siempre exactamente el mismo verde y el
+ * mismo rojo, sin importar cómo tenga configurado el teléfono. Que la señal
+ * de "pasa" cambie de tono entre dispositivos es justo lo que no queremos.
+ *
+ * Son tonos oscuros a propósito: van con texto blanco encima.
+ */
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
+  --ok-strong: #15803d;
+  --warn-strong: #b45309;
+  --deny-strong: #b91c1c;
 }
 
 @theme inline {
@@ -39,10 +81,13 @@
 
   --color-ok: var(--ok);
   --color-ok-surface: var(--ok-surface);
+  --color-ok-strong: var(--ok-strong);
   --color-warn: var(--warn);
   --color-warn-surface: var(--warn-surface);
+  --color-warn-strong: var(--warn-strong);
   --color-deny: var(--deny);
   --color-deny-surface: var(--deny-surface);
+  --color-deny-strong: var(--deny-strong);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -58,4 +103,16 @@ body {
 html {
   -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
+}
+
+/*
+ * Íconos del botón de tema.
+ *
+ * Se muestran y ocultan por CSS y no por estado de React: el tema lo define un
+ * script antes de hidratar, así que si el ícono dependiera de estado habría
+ * discrepancia entre lo que renderiza el servidor y lo que ve el navegador.
+ */
+[data-theme="dark"] .icon-when-light,
+[data-theme="light"] .icon-when-dark {
+  display: none;
 }

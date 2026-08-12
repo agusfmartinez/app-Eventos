@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, Copy, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/modal";
 import { regenerateInvitationAction } from "@/lib/actions/invitations";
 
 export function CopyLinkButton({ url }: { url: string }) {
@@ -32,18 +33,13 @@ export function CopyLinkButton({ url }: { url: string }) {
 export function RegenerateButton({ guestId }: { guestId: string }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
 
   function regenerate() {
-    const confirmed = confirm(
-      "Se va a generar un link y un QR nuevos.\n\n" +
-        "La invitación que ya hayas enviado va a dejar de funcionar. " +
-        "Los ingresos ya registrados no se modifican.\n\n¿Continuar?",
-    );
-    if (!confirmed) return;
-
     setError(null);
     startTransition(async () => {
       const result = await regenerateInvitationAction(guestId);
+      setAsking(false);
       if (result.error) setError(result.error);
     });
   }
@@ -53,7 +49,7 @@ export function RegenerateButton({ guestId }: { guestId: string }) {
       <Button
         variant="secondary"
         size="sm"
-        onClick={regenerate}
+        onClick={() => setAsking(true)}
         disabled={pending}
       >
         <RefreshCw size={15} />
@@ -64,6 +60,17 @@ export function RegenerateButton({ guestId }: { guestId: string }) {
           {error}
         </p>
       ) : null}
+
+      <ConfirmDialog
+        open={asking}
+        onClose={() => setAsking(false)}
+        onConfirm={regenerate}
+        pending={pending}
+        variant="danger"
+        title="Regenerar la invitación"
+        confirmLabel="Regenerar"
+        description="Se genera un link y un QR nuevos: la invitación que ya hayas enviado deja de funcionar. Los ingresos ya registrados no se modifican."
+      />
     </div>
   );
 }

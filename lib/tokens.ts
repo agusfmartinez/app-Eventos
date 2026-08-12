@@ -18,6 +18,24 @@ export function generateInvitationToken(): string {
 }
 
 /**
+ * Contraseña temporal para una cuenta recién creada o reseteada.
+ *
+ * Usa el mismo alfabeto sin caracteres ambiguos que los códigos de invitación,
+ * por el mismo motivo: el admin se la va a dictar por teléfono o por WhatsApp,
+ * y no queremos discusiones sobre si es un cero o una O.
+ *
+ * Es temporal por diseño: la cuenta nace con `mustChangePassword` en true y la
+ * aplicación no deja hacer nada hasta cambiarla.
+ */
+export function generateTemporaryPassword(length = 10): string {
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += CODE_CHARS[randomInt(CODE_CHARS.length)];
+  }
+  return out;
+}
+
+/**
  * Código corto legible, respaldo para cuando el QR no se puede escanear
  * (pantalla rota, brillo bajo, captura comprimida).
  *

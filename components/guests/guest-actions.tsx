@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Ban, CheckCircle2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/modal";
 import {
   deleteGuestAction,
   setInvitationStatusAction,
@@ -21,6 +22,7 @@ export function GuestActions({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
 
   const blocked = status === InvitationStatus.BLOCKED;
 
@@ -36,10 +38,10 @@ export function GuestActions({
   }
 
   function remove() {
-    if (!confirm(`¿Eliminar a ${guestName}? No se puede deshacer.`)) return;
     setError(null);
     startTransition(async () => {
       const result = await deleteGuestAction(guestId);
+      setAsking(false);
       // El caso esperado: el invitado ya registró ingresos y borrarlo se
       // rechaza para no romper el historial.
       if (result.error) setError(result.error);
@@ -65,7 +67,7 @@ export function GuestActions({
         <Button
           variant="dangerGhost"
           size="sm"
-          onClick={remove}
+          onClick={() => setAsking(true)}
           disabled={pending}
           title="Eliminar"
         >
@@ -78,6 +80,17 @@ export function GuestActions({
           {error}
         </p>
       ) : null}
+
+      <ConfirmDialog
+        open={asking}
+        onClose={() => setAsking(false)}
+        onConfirm={remove}
+        pending={pending}
+        variant="danger"
+        title={`Eliminar a ${guestName}`}
+        confirmLabel="Eliminar"
+        description="Se borra el invitado y su invitación. No se puede deshacer."
+      />
     </div>
   );
 }

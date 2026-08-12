@@ -8,6 +8,7 @@ import { deleteEventAction, updateEventAction } from "@/lib/actions/events";
 import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { toDateInputValue } from "@/lib/format";
+import { Role } from "@/lib/generated/prisma/enums";
 
 export const metadata = { title: "Editar evento" };
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function EditarEventoPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdminOrOrganizer();
+  const actor = await requireAdminOrOrganizer();
   const { id } = await params;
 
   const [event, activeSpaces] = await Promise.all([
@@ -82,19 +83,30 @@ export default async function EditarEventoPage({
         />
       </Card>
 
-      <Card className="border-deny/30 p-5">
-        <h2 className="font-semibold text-deny">Zona de riesgo</h2>
-        <p className="mt-1 mb-4 text-sm text-muted">
-          Eliminar el evento borra también sus invitados, invitaciones e
-          ingresos registrados.
+      {/* Borrar es la única operación que destruye historial de ingresos, así
+          que queda reservada a los administradores. Al organizador ni se le
+          muestra: ofrecerle un botón que va a fallar es peor que no tenerlo. */}
+      {actor.role === Role.ADMIN ? (
+        <Card className="border-deny/30 p-5">
+          <h2 className="font-semibold text-deny">Zona de riesgo</h2>
+          <p className="mt-1 mb-4 text-sm text-muted">
+            Eliminar el evento borra también sus invitados, invitaciones e
+            ingresos registrados.
+          </p>
+          <DeleteEventForm
+            action={deleteEventAction.bind(null, event.id)}
+            eventName={event.name}
+            guestCount={event._count.guests}
+            checkInCount={event._count.checkIns}
+          />
+        </Card>
+      ) : (
+        <p className="text-sm text-muted">
+          Para dar de baja este evento sin perder su historial, cambiale el
+          estado a <strong>Cancelado</strong>. Eliminarlo definitivamente lo
+          puede hacer solo un administrador.
         </p>
-        <DeleteEventForm
-          action={deleteEventAction.bind(null, event.id)}
-          eventName={event.name}
-          guestCount={event._count.guests}
-          checkInCount={event._count.checkIns}
-        />
-      </Card>
+      )}
     </div>
   );
 }

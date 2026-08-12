@@ -12,7 +12,7 @@ export async function loginAction(
 ): Promise<LoginState> {
   try {
     await signIn("credentials", {
-      email: formData.get("email"),
+      username: formData.get("username"),
       password: formData.get("password"),
       redirectTo: "/",
     });
@@ -20,8 +20,8 @@ export async function loginAction(
     // signIn lanza un redirect en el caso exitoso: ese error TIENE que
     // propagarse o el login nunca navega.
     if (error instanceof AuthError) {
-      // Mensaje único a propósito: no revelamos si el email existe.
-      return { error: "Email o contraseña incorrectos." };
+      // Mensaje único a propósito: no revelamos si el usuario existe.
+      return { error: "Usuario o contraseña incorrectos." };
     }
     throw error;
   }

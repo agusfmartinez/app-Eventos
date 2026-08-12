@@ -1,4 +1,4 @@
-import { EventStatus } from "@/lib/generated/prisma/enums";
+import { EventStatus, Role } from "@/lib/generated/prisma/enums";
 
 const MESES = [
   "enero",
@@ -54,6 +54,23 @@ export function formatDateTime(date: Date): string {
   }).format(date);
 }
 
+/**
+ * El cliente le dice "recepción" al personal de puerta. El código mantiene
+ * `DOOR`, que es corto y no ambiguo; lo que ve el usuario usa su palabra.
+ */
+export const ROLE_LABELS: Record<Role, string> = {
+  ADMIN: "Administrador",
+  ORGANIZER: "Organizador",
+  DOOR: "Recepción",
+};
+
+export const ROLE_DESCRIPTIONS: Record<Role, string> = {
+  ADMIN: "Control total: gestiona usuarios y es el único que puede eliminar eventos.",
+  ORGANIZER:
+    "Crea y administra eventos, invitados y espacios. No gestiona usuarios ni elimina eventos.",
+  DOOR: "Solo escanea y registra ingresos en los eventos asignados.",
+};
+
 export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   DRAFT: "Borrador",
   PUBLISHED: "Publicado",
@@ -71,9 +88,11 @@ export function formatPhone(phone: string | null): string {
   return phone;
 }
 
-export function guestFullName(guest: {
+/** Sirve para cualquier persona del sistema: invitados y usuarios. */
+export function personFullName(person: {
   firstName: string;
   lastName: string;
 }): string {
-  return `${guest.firstName} ${guest.lastName}`.trim();
+  return `${person.firstName} ${person.lastName}`.trim();
 }
+

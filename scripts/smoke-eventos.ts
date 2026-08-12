@@ -18,7 +18,7 @@ import { deriveStatus } from "../lib/invitation-status";
 import { generateInvitationToken, generateShortCode } from "../lib/tokens";
 
 const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000";
-const EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@salon.local";
+const USERNAME = process.env.SEED_ADMIN_USERNAME ?? "ASALON";
 const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "admin1234";
 const MARKER = `SMOKE-${Date.now()}`;
 
@@ -58,7 +58,7 @@ async function login() {
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       csrfToken,
-      email: EMAIL,
+      username: USERNAME,
       password: PASSWORD,
     }).toString(),
   });

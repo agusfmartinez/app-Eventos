@@ -8,10 +8,17 @@ import { Role } from "@/lib/generated/prisma/enums";
 
 export type CurrentUser = {
   id: string;
-  email: string;
+  username: string;
+  email: string | null;
+  firstName: string;
+  lastName: string;
   fullName: string;
   role: Role;
+  mustChangePassword: boolean;
 };
+
+/** Pantalla donde se cambia la contraseña temporal. */
+export const CHANGE_PASSWORD_PATH = "/cambiar-clave";
 
 /**
  * Sin RLS, la base no protege nada por sí sola: la autorización vive acá.
@@ -36,26 +43,48 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, email: true, fullName: true, role: true, active: true },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      active: true,
+      mustChangePassword: true,
+    },
   });
 
   if (!user || !user.active) return null;
 
   return {
     id: user.id,
+    username: user.username,
     email: user.email,
-    fullName: user.fullName,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    fullName: `${user.firstName} ${user.lastName}`,
     role: user.role,
+    mustChangePassword: user.mustChangePassword,
   };
 }
 
-/** Exige sesión válida. Si se pasan roles, exige además uno de ellos. */
+/**
+ * Exige sesión válida. Si se pasan roles, exige además uno de ellos.
+ *
+ * Si la cuenta todavía tiene la contraseña temporal, manda a cambiarla y no
+ * deja hacer nada más. El corte está acá, en el guard que usa toda la
+ * aplicación, y no en cada pantalla: dejarlo a criterio de cada página
+ * garantiza que alguna se olvide.
+ */
 export async function requireAuth(
   ...allowedRoles: Role[]
 ): Promise<CurrentUser> {
   const user = await getCurrentUser();
 
   if (!user) redirect("/login");
+
+  if (user.mustChangePassword) redirect(CHANGE_PASSWORD_PATH);
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     redirect("/sin-acceso");
@@ -67,6 +96,17 @@ export async function requireAuth(
 /** Atajo: solo personal que administra (no el control de acceso). */
 export function requireAdminOrOrganizer() {
   return requireAuth(Role.ADMIN, Role.ORGANIZER);
+}
+
+/**
+ * Solo administradores.
+ *
+ * La gestión de cuentas queda fuera del alcance del organizador a propósito:
+ * quien puede crear usuarios puede crearse un admin, y eso convertiría el rol
+ * de organizador en administrador de hecho.
+ */
+export function requireAdmin() {
+  return requireAuth(Role.ADMIN);
 }
 
 /**

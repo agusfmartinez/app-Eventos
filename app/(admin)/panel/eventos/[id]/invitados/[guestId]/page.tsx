@@ -8,7 +8,7 @@ import { Badge, Card, PageHeader } from "@/components/ui/misc";
 import { updateGuestAction } from "@/lib/actions/guests";
 import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
-import { formatDateTime, guestFullName } from "@/lib/format";
+import { formatDateTime, personFullName } from "@/lib/format";
 import {
   deriveStatus,
   STATUS_LABELS,
@@ -63,7 +63,7 @@ export default async function InvitadoPage({
           peopleCount: true,
           createdAt: true,
           stationLabel: true,
-          operator: { select: { fullName: true } },
+          operator: { select: { firstName: true, lastName: true } },
         },
       },
     },
@@ -77,7 +77,7 @@ export default async function InvitadoPage({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={guestFullName(guest)}
+        title={personFullName(guest)}
         subtitle={
           <>
             {guest.event.name}
@@ -94,7 +94,6 @@ export default async function InvitadoPage({
         actions={
           <ButtonLink href={`/panel/eventos/${guest.event.id}`} variant="secondary">
             <ArrowLeft size={16} />
-            Volver
           </ButtonLink>
         }
       />
@@ -102,7 +101,7 @@ export default async function InvitadoPage({
       {inv ? (
         <InvitationCard
           guestId={guest.id}
-          guestName={guestFullName(guest)}
+          guestName={personFullName(guest)}
           phone={guest.phone}
           token={inv.token}
           shortCode={inv.shortCode}
@@ -150,7 +149,9 @@ export default async function InvitadoPage({
                 <span className="text-muted">
                   {formatDateTime(checkIn.createdAt)}
                   {checkIn.stationLabel ? ` · ${checkIn.stationLabel}` : ""}
-                  {checkIn.operator ? ` · ${checkIn.operator.fullName}` : ""}
+                  {checkIn.operator
+                    ? ` · ${personFullName(checkIn.operator)}`
+                    : ""}
                 </span>
               </div>
             ))}

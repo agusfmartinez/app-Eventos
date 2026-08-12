@@ -5,6 +5,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../lib/generated/prisma/client";
 import { Role } from "../lib/generated/prisma/enums";
+import { buildUsername } from "../lib/username";
 
 // Cliente propio en vez de lib/db.ts: ese módulo importa "server-only" y
 // explota fuera del runtime de Next.
@@ -18,32 +19,71 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const email = (process.env.SEED_ADMIN_EMAIL ?? "").trim().toLowerCase();
+  const firstName = (process.env.SEED_ADMIN_FIRST_NAME ?? "Admin").trim();
+  const lastName = (process.env.SEED_ADMIN_LAST_NAME ?? "Salon").trim();
   const password = process.env.SEED_ADMIN_PASSWORD ?? "";
-  const fullName = process.env.SEED_ADMIN_NAME ?? "Administrador";
+  const email = (process.env.SEED_ADMIN_EMAIL ?? "").trim().toLowerCase() || null;
 
-  if (!email || !password) {
-    throw new Error(
-      "Faltan SEED_ADMIN_EMAIL y/o SEED_ADMIN_PASSWORD en el .env.",
-    );
+  if (!password) {
+    throw new Error("Falta SEED_ADMIN_PASSWORD en el .env.");
   }
-
   if (password.length < 8) {
     throw new Error("SEED_ADMIN_PASSWORD tiene que tener al menos 8 caracteres.");
   }
 
+  const username = buildUsername(firstName, lastName);
   const passwordHash = await hash(password);
 
-  // upsert: correr el seed dos veces no debe romper ni pisar la contraseña
-  // de un admin que ya existe y quizá ya la cambió.
-  const admin = await prisma.user.upsert({
-    where: { email },
-    update: { role: Role.ADMIN, active: true },
-    create: { email, passwordHash, fullName, role: Role.ADMIN },
-    select: { email: true, fullName: true, role: true },
+  // La cuenta se identifica por username **o** por email: así, si el admin ya
+  // existe con otro usuario —por ejemplo el que generó la migración a partir
+  // del nombre viejo— se actualiza en lugar de crear un duplicado.
+  //
+  // Correr el seed dos veces no pisa la contraseña de un admin que ya existe y
+  // quizá ya la cambió.
+  //
+  // El admin del seed nace con `mustChangePassword` en false: su contraseña
+  // sale del .env, así que ya la eligió quien instaló el sistema. Las cuentas
+  // creadas después desde la pantalla sí arrancan con una temporal.
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [{ username }, ...(email ? [{ email }] : [])],
+    },
+    select: { id: true, username: true },
   });
 
-  console.log(`✔ Admin listo: ${admin.email} (${admin.fullName})`);
+  const admin = existing
+    ? await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          username,
+          firstName,
+          lastName,
+          email,
+          role: Role.ADMIN,
+          active: true,
+        },
+        select: { username: true, firstName: true, lastName: true },
+      })
+    : await prisma.user.create({
+        data: {
+          username,
+          firstName,
+          lastName,
+          email,
+          passwordHash,
+          role: Role.ADMIN,
+          mustChangePassword: false,
+        },
+        select: { username: true, firstName: true, lastName: true },
+      });
+
+  if (existing && existing.username !== username) {
+    console.log(`  (se renombró el usuario ${existing.username} → ${username})`);
+  }
+
+  console.log(
+    `✔ Admin listo: ${admin.username} (${admin.firstName} ${admin.lastName})`,
+  );
 }
 
 main()

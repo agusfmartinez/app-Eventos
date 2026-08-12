@@ -59,6 +59,7 @@ Adminer (inspección de la base): <http://localhost:8080>
 | `npm run test:reportes` | Estadísticas, historial y exportación CSV (requiere el server) |
 | `npm run test:espacios` | Espacios, cupo y detección de doble reserva (requiere el server) |
 | `npm run test:calendario` | Grilla del calendario y ocupación (requiere el server) |
+| `npm run test:usuarios` | Roles, permisos y asignación de recepción (requiere el server) |
 | `npm run db:up` / `db:down` | Levanta/baja Postgres y Adminer |
 | `npm run db:migrate` | Crea y aplica una migración (desarrollo) |
 | `npm run db:deploy` | Aplica migraciones sin generar (producción) |
@@ -127,14 +128,81 @@ Adminer (inspección de la base): <http://localhost:8080>
   base como última red. **Nunca modificar `enteredCount` fuera de
   `confirmCheckIn`.** Si tocás ese archivo, corré `npm run test:concurrencia`.
 
-- **Asignar operadores a eventos todavía se hace por SQL.** La tabla
-  `event_staff` funciona y el scanner la respeta, pero la pantalla para
-  administrarla llega en la Fase 7. Mientras tanto:
+- **El puesto ("Puerta 1") lo define quien arma el evento, no quien escanea.**
+  Sale de `event_staff.station_label` y la pantalla de recepción solo lo
+  informa. Antes se escribía en cada teléfono y se guardaba en `localStorage`:
+  alcanzaba un typo para que el historial mostrara dos puertas donde había
+  una. El servidor lo resuelve solo en `confirmCheckInAction`, así que el
+  cliente ya no puede mandar uno inventado.
 
-  ```sql
-  INSERT INTO event_staff (event_id, user_id, station_label, created_at)
-  VALUES ('<event-uuid>', '<user-uuid>', 'Puerta 1', now());
-  ```
+- **Se inicia sesión con un nombre de usuario, no con el email.** Se genera
+  solo: inicial del nombre + apellido, sin acentos ni símbolos.
+  `Agustín Martínez` → `AMARTINEZ`. Los repetidos se numeran (`AMARTINEZ2`).
+  El email es un dato de contacto opcional.
+
+- **El username se genera una sola vez, en el alta.** Corregir el nombre o el
+  apellido después no lo recalcula: es la credencial con la que la persona
+  entra y ya la tiene anotada. Un typo en el apellido, arreglado un mes
+  después, la dejaría afuera sin que nadie se entere.
+
+- **Una contraseña temporal no se puede volver a mostrar.** Se guarda hasheada
+  con argon2, que es de un solo sentido: la base permite verificarla, no
+  reconstruirla. Si el admin la perdió, el camino es generar otra con
+  "Resetear clave" — el resultado para el usuario es el mismo y evita tener
+  credenciales legibles guardadas.
+
+- **Las confirmaciones y las credenciales van en modal, no en `confirm()` ni
+  en un cartel al costado.** El `confirm()` del navegador no se puede estilar
+  y en mobile aparece pegado arriba, lejos del botón que lo disparó. El cartel
+  verde con la contraseña se perdía entre las filas de la lista. `Modal` usa
+  el `<dialog>` nativo: foco atrapado, Escape y top-layer los resuelve el
+  navegador.
+
+- **El admin nunca elige contraseñas.** Al crear una cuenta el sistema genera
+  una temporal y se la muestra **una sola vez** para que se la pase a la
+  persona; hasta que la cambie, `requireAuth` la desvía a `/cambiar-clave` y
+  no la deja hacer nada más. El botón "Resetear clave" repite el ciclo: es el
+  reemplazo del "olvidé mi contraseña" por email.
+
+- **Las cuentas no se borran, se desactivan.** Un usuario borrado se llevaría
+  la referencia de operador en los check-ins que registró, y el historial
+  dejaría de decir quién dejó entrar a quién.
+
+- **Tema claro y oscuro.** Arranca siguiendo la preferencia del dispositivo y
+  hay un botón en la cabecera para forzar uno u otro; la elección se guarda por
+  dispositivo. Un script en el `<head>` resuelve el tema **antes del primer
+  pintado** — si se aplicara después de hidratar, la página parpadearía de
+  claro a oscuro en cada carga.
+
+  Dos superficies quedan fijas a propósito:
+  - **La invitación pública siempre en claro.** El QR necesita módulos oscuros
+    sobre fondo claro; invertido, varios lectores fallan.
+  - **El sello del scanner usa `--ok-strong` / `--warn-strong` /
+    `--deny-strong`, idénticos en ambos temas.** El operador tiene que ver
+    siempre el mismo verde y el mismo rojo, sin importar cómo tenga
+    configurado el teléfono.
+
+- **Roles.** Los tres son personal del salón. El anfitrión —el cliente que
+  contrata el evento— **no** tiene cuenta en el sistema.
+
+  | | Admin | Organizador | Recepción |
+  |---|---|---|---|
+  | Crear y editar eventos | ✓ | ✓ | |
+  | Cancelar un evento | ✓ | ✓ | |
+  | **Eliminar** un evento | ✓ | | |
+  | Invitados, invitaciones, espacios | ✓ | ✓ | |
+  | Asignar recepción a un evento | ✓ | ✓ | |
+  | Escanear y registrar ingresos | ✓ | ✓ | solo asignados |
+  | Crear cuentas y cambiar roles | ✓ | | |
+
+- **Solo los administradores gestionan cuentas.** Quien puede crear usuarios
+  puede crearse un admin, así que dárselo al organizador lo convertiría en
+  administrador de hecho. Asignar recepción a un evento sí lo puede hacer el
+  organizador: es parte de organizar y no otorga permisos nuevos.
+
+- **No se puede dejar el sistema sin administradores activos.** Ni
+  desactivarse uno mismo. Sin esos dos frenos, la única salida sería editar la
+  base a mano.
 
 - **El día del salón arranca a las 08:00**, no a la medianoche
   (`VENUE_DAY_START_MIN` en [`lib/schedule.ts`](lib/schedule.ts)). Una fiesta
@@ -186,7 +254,8 @@ Adminer (inspección de la base): <http://localhost:8080>
 - [x] **Fase 5** — Dashboard, historial de ingresos y exportación CSV
 - [x] **Fase 6** — Espacios / sub-salones, cupo del evento y doble reserva
 - [x] **Fase 7** — Calendario de disponibilidad (vista mes y día)
-- [ ] Fase 8 — Usuarios y asignación de recepción (ver `ROADMAP.md`)
+- [x] **Fase 8** — Usuarios, roles y asignación de recepción
+- [ ] Fase 9 — Escaneo sin elegir evento (ver `ROADMAP.md`)
 - [ ] Fase 6 — Importación CSV
 - [ ] Fase 7 — Roles y autorización estricta
 - [ ] Fase 8 — WhatsApp Business API (opcional)
