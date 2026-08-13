@@ -5,7 +5,6 @@ import {
   History,
   Pencil,
   ScanLine,
-  Search,
   StickyNote,
   Users,
 } from "lucide-react";
@@ -19,8 +18,8 @@ import {
 } from "@/components/events/event-warnings";
 import { AddGuestPanel } from "@/components/guests/add-guest-panel";
 import { GuestActions } from "@/components/guests/guest-actions";
+import { GuestSearch } from "@/components/guests/guest-search";
 import { ButtonLink } from "@/components/ui/button";
-import { Input } from "@/components/ui/field";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/misc";
 import { createGuestAction } from "@/lib/actions/guests";
 import { requireAdminOrOrganizer } from "@/lib/authz";
@@ -211,21 +210,11 @@ export default async function EventoPage({
         <AddGuestPanel
           action={createGuestAction.bind(null, event.id)}
           search={
-            <form className="flex items-center gap-2">
-              <div className="relative">
-                <Search
-                  size={15}
-                  className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted"
-                />
-                <Input
-                  name="q"
-                  defaultValue={query}
-                  placeholder="Buscar por nombre o teléfono"
-                  className="w-64 pl-8"
-                  aria-label="Buscar invitados"
-                />
-              </div>
-            </form>
+            <GuestSearch
+              defaultValue={query}
+              className="w-64"
+              inputClassName="rounded-lg py-2 text-sm"
+            />
           }
         />
 

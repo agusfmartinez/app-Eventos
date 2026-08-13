@@ -80,8 +80,8 @@ export default async function InvitadoPage({
         title={personFullName(guest)}
         subtitle={
           <>
-            {guest.event.name}
-            {inv ? ` · código ${inv.shortCode}` : ""}
+            {`Evento: ${guest.event.name}`}
+            {inv ? ` - Código: ${inv.shortCode}` : ""}
             {derived ? (
               <span className="ml-2">
                 <Badge tone={STATUS_TONES[derived]}>

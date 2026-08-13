@@ -34,6 +34,9 @@ const MINUTES_PER_DAY = 24 * 60;
  */
 export const VENUE_DAY_START_MIN = 8 * 60;
 
+/** Todos los eventos ocurren acá; las horas guardadas son de este reloj. */
+export const VENUE_TIME_ZONE = "America/Argentina/Buenos_Aires";
+
 export type Interval = { start: number; end: number };
 
 export type SchedulableEvent = {
@@ -152,6 +155,62 @@ export async function findScheduleConflicts({
 /** Día calendario de una fecha, expuesto para el armado del calendario. */
 export function dayIndex(date: Date): number {
   return dayNumber(date);
+}
+
+/**
+ * "Ahora" en la misma escala que los intervalos: minutos del reloj del salón.
+ *
+ * Se lee la hora local del salón con Intl en vez de usar los getters del Date,
+ * que darían la hora del servidor. En producción el VPS puede estar en UTC, y
+ * ahí la diferencia son tres horas: justo el margen que decide si la fiesta de
+ * anoche todavía se puede escanear.
+ */
+export function venueNowMinutes(now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: VENUE_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number.parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
+
+  const day = Math.floor(
+    Date.UTC(get("year"), get("month") - 1, get("day")) / 86_400_000,
+  );
+
+  return day * MINUTES_PER_DAY + get("hour") * 60 + get("minute");
+}
+
+/**
+ * La jornada del salón que está corriendo ahora mismo.
+ *
+ * A las 03:00 del 16 todavía es "la noche del 15": el día arranca a las 08:00,
+ * no a medianoche. Sin esto, el operador se quedaría sin poder escanear
+ * exactamente en la madrugada, que es cuando más gente sale y vuelve a entrar.
+ */
+export function currentVenueDay(now: Date = new Date()): Interval {
+  const nowMin = venueNowMinutes(now);
+  const start =
+    Math.floor((nowMin - VENUE_DAY_START_MIN) / MINUTES_PER_DAY) *
+      MINUTES_PER_DAY +
+    VENUE_DAY_START_MIN;
+
+  return { start, end: start + MINUTES_PER_DAY };
+}
+
+/** Fecha (YYYY-MM-DD, UTC) del día calendario en el que arranca una jornada. */
+export function dateOfDayNumber(day: number): Date {
+  return new Date(day * 86_400_000);
+}
+
+/** Día calendario en el que arranca la jornada indicada. */
+export function dayNumberOfInterval(interval: Interval): number {
+  return Math.floor(interval.start / MINUTES_PER_DAY);
 }
 
 /** Ventana de 24 horas que el salón considera "el día" de esa fecha. */

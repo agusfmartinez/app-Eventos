@@ -18,11 +18,12 @@ que todavía no están construidas.
 | 4. Scanner y check-in atómico | ✅ hecha |
 | 5. Dashboard, historial y exportación CSV | ✅ hecha |
 | 6. Espacios / sub-salones, cupo y doble reserva | ✅ hecha |
-| 7. Calendario de disponibilidad | pendiente |
-| 8. Usuarios y asignación de recepción | pendiente |
+| 7. Calendario de disponibilidad | ✅ hecha |
+| 8. Usuarios y asignación de recepción | ✅ hecha |
+| 9. Escaneo sin elegir evento | ✅ hecha |
 
-Hoy asignar operadores a eventos se hace por SQL (ver README). La Fase 7 lo
-resuelve, y varias de las funcionalidades de abajo dependen de ella.
+Lo que queda son los dos pedidos más grandes: el formulario público de registro
+(10) y WhatsApp Business API (11).
 
 ---
 
@@ -298,7 +299,7 @@ Esfuerzo: medio. Es la que **destraba el punto A**.
 | ✅ **6** | Espacios / sub-salones + cupo del evento (**B**) | chico | **Hecha.** Incluye `lib/schedule.ts`, la base de cálculo que va a usar el calendario |
 | ✅ **7** | Calendario de disponibilidad (**D**) | medio | **Hecha.** Vista mes y vista día por espacio, con ventana anclada a las 08:00 |
 | ✅ **8** | Usuarios y asignación de recepción (**E**) | medio | **Hecha.** ABM de cuentas solo para admins, asignación por evento con puesto |
-| **9** | Escaneo sin elegir evento (**A**) | medio | Necesita la 8 para el filtro de acceso; luce mejor con la 6 |
+| ✅ **9** | Escaneo sin elegir evento (**A**) | medio | **Hecha.** El QR resuelve el evento; la ventana es la jornada del salón, no el día calendario. La ficha por evento quedó como vista de solo lectura para recepción |
 | **10** | Formulario de registro de invitados (**C**) | medio-alto | Lo más grande y lo único que abre escritura al público |
 | **11** | WhatsApp Business API | medio | Como estaba: opcional |
 

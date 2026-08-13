@@ -1,44 +1,45 @@
 import Link from "next/link";
-import { CalendarOff, LayoutDashboard, ScanLine } from "lucide-react";
+import { CalendarDays, CalendarOff, LayoutDashboard, ScanLine } from "lucide-react";
 
+import { Scanner } from "@/components/scanner/scanner";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logoutAction } from "@/lib/actions/session";
 import { requireAuth } from "@/lib/authz";
 import { prisma } from "@/lib/db";
-import { formatEventDateShort, todayAtVenue, toDateInputValue } from "@/lib/format";
 import { Role } from "@/lib/generated/prisma/enums";
+import { listScannableEvents } from "@/lib/scanning";
 
 export const metadata = { title: "Control de acceso" };
 export const dynamic = "force-dynamic";
 
 /**
- * Selector de evento. Vive fuera del grupo (admin) a propósito: el rol DOOR
+ * Control de acceso. Vive fuera del grupo (admin) a propósito: el rol DOOR
  * tiene que entrar acá y el layout del panel lo rechazaría.
+ *
+ * No hay selector de evento: el QR lo resuelve. La lista de abajo es contexto
+ * —qué se está atendiendo esta noche— y el acceso a la ficha de cada evento en
+ * modo lectura, para cuando alguien dice "yo tendría que estar en la lista".
  */
 export default async function ControlPage() {
   const user = await requireAuth();
 
   const isStaffOnly = user.role === Role.DOOR;
+  const events = await listScannableEvents(user);
 
-  const events = await prisma.event.findMany({
-    where: {
-      // Un operador de puerta solo ve los eventos donde está asignado.
-      // Administradores y organizadores ven todos.
-      ...(isStaffOnly ? { staff: { some: { userId: user.id } } } : {}),
-      status: { in: ["PUBLISHED", "IN_PROGRESS"] },
-    },
-    orderBy: [{ eventDate: "asc" }, { startTime: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      eventDate: true,
-      startTime: true,
-      location: true,
-      _count: { select: { guests: true } },
-    },
+  // Puestos con los que está asignado esta noche. Puede haber más de uno si
+  // cubre dos eventos a la vez.
+  const assignments = await prisma.eventStaff.findMany({
+    where: { userId: user.id, eventId: { in: events.map((e) => e.id) } },
+    select: { stationLabel: true },
   });
 
-  const today = todayAtVenue();
+  const stations = [
+    ...new Set(
+      assignments
+        .map((a) => a.stationLabel?.trim())
+        .filter((label): label is string => Boolean(label)),
+    ),
+  ];
 
   return (
     <main className="flex flex-1 flex-col">
@@ -48,7 +49,17 @@ export default async function ControlPage() {
           <span className="font-semibold">Control de acceso</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* La lista vive en su propia pantalla y no debajo de la cámara: con
+              el escaneo libre es una consulta ocasional, y ahí abajo solo
+              empujaba el sello fuera del viewport del celular. */}
+          <Link
+            href="/control/eventos"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted"
+          >
+            <CalendarDays size={15} />
+            Eventos
+          </Link>
           <ThemeToggle />
           {!isStaffOnly ? (
             <Link
@@ -67,50 +78,19 @@ export default async function ControlPage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-lg flex-1 p-4">
-        <p className="mb-4 text-sm text-muted">
-          Hola {user.fullName}. Elegí el evento donde estás trabajando.
-        </p>
-
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-4">
         {events.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
             <CalendarOff size={28} className="text-muted" />
-            <p className="font-medium">No hay eventos disponibles</p>
+            <p className="font-medium">No hay eventos abiertos ahora</p>
             <p className="max-w-xs text-sm text-muted">
               {isStaffOnly
-                ? "No estás asignado a ningún evento publicado. Pedile a un organizador que te asigne."
-                : "Publicá un evento desde el panel para poder controlar el ingreso."}
+                ? "No estás asignado a ningún evento de esta noche. Pedile a un organizador que te asigne."
+                : "Publicá un evento para hoy desde el panel para poder controlar el ingreso."}
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {events.map((event) => {
-              const isToday = toDateInputValue(event.eventDate) === today;
-
-              return (
-                <li key={event.id}>
-                  <Link
-                    href={`/control/${event.id}`}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 active:border-brand"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{event.name}</p>
-                      <p className="mt-0.5 text-sm text-muted">
-                        {formatEventDateShort(event.eventDate)}
-                        {event.startTime ? ` · ${event.startTime} hs` : ""}
-                        {` · ${event._count.guests} invitados`}
-                      </p>
-                    </div>
-                    {isToday ? (
-                      <span className="shrink-0 rounded-full bg-ok-surface px-2.5 py-1 text-xs font-semibold text-ok">
-                        HOY
-                      </span>
-                    ) : null}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <Scanner stations={stations} />
         )}
       </div>
     </main>

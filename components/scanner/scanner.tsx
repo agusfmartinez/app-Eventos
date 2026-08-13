@@ -11,7 +11,7 @@ import {
   resolveShortCodeAction,
   scanLookupAction,
 } from "@/lib/actions/checkin";
-import type { CheckInResult } from "@/lib/checkin";
+import type { CheckInResult, ScannedEvent } from "@/lib/checkin";
 
 /**
  * Scanner de puerta.
@@ -23,9 +23,10 @@ import type { CheckInResult } from "@/lib/checkin";
  * volver a escanear. Todo con botones grandes, usable con una mano.
  */
 
-// Vuelve solo a la cámara después de un ingreso exitoso: el operador no tiene
-// que apretar nada entre invitado e invitado.
-const AUTO_RESUME_MS = 2500;
+// El sello se queda hasta que el operador toca "escanear siguiente". Antes
+// volvía solo a los 2,5 segundos, pero el resultado es lo que se le muestra al
+// invitado —y a dónde tiene que ir—: que desaparezca mientras alguien lo está
+// leyendo obliga a repetir el escaneo.
 
 // Ignora el mismo código si se relee enseguida. Sin esto, la cámara dispara
 // varias veces sobre el mismo QR mientras el invitado lo sostiene.
@@ -123,24 +124,19 @@ function describeCameraError(error: unknown): string {
 type Phase =
   | { kind: "scanning" }
   | { kind: "checking" }
-  | { kind: "result"; result: CheckInResult; code: string };
+  | {
+      kind: "result";
+      result: CheckInResult;
+      event: ScannedEvent | null;
+      code: string;
+    };
 
-export function Scanner({
-  eventId,
-  eventName,
-  stationLabel,
-}: {
-  eventId: string;
-  eventName: string;
-  /** Puesto asignado por quien armó el evento. Null si no le pusieron uno. */
-  stationLabel: string | null;
-}) {
+export function Scanner({ stations }: { stations: string[] }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const startingRef = useRef(false);
   const lastScanRef = useRef<{ code: string; at: number } | null>(null);
-  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [phase, setPhase] = useState<Phase>({ kind: "scanning" });
   const [people, setPeople] = useState(1);
@@ -167,21 +163,18 @@ export function Scanner({
     streamRef.current = null;
   }, []);
 
-  const handleCode = useCallback(
-    (code: string) => {
-      setPhase({ kind: "checking" });
-      setManualError(null);
+  const handleCode = useCallback((code: string) => {
+    setPhase({ kind: "checking" });
+    setManualError(null);
 
-      startTransition(async () => {
-        const result = await scanLookupAction(eventId, code);
-        // Si puede entrar, arrancamos con todos los disponibles: el caso
-        // habitual es que el grupo entero entre junto.
-        if (result.result === "ALLOWED") setPeople(result.available);
-        setPhase({ kind: "result", result, code });
-      });
-    },
-    [eventId],
-  );
+    startTransition(async () => {
+      const { result, event } = await scanLookupAction(code);
+      // Si puede entrar, arrancamos con todos los disponibles: el caso
+      // habitual es que el grupo entero entre junto.
+      if (result.result === "ALLOWED") setPeople(result.available);
+      setPhase({ kind: "result", result, event, code });
+    });
+  }, []);
 
   const onScan = useCallback(
     (text: string) => {
@@ -306,24 +299,18 @@ export function Scanner({
     return () => {
       clearTimeout(timer);
       stopStream();
-      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
     };
   }, [startCamera, stopStream]);
 
   function backToScanning() {
-    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
     setPhase({ kind: "scanning" });
     setManualCode("");
   }
 
   function confirm(code: string) {
     startTransition(async () => {
-      const result = await confirmCheckInAction(eventId, code, people);
-      setPhase({ kind: "result", result, code });
-
-      if (result.result === "OK") {
-        resumeTimerRef.current = setTimeout(backToScanning, AUTO_RESUME_MS);
-      }
+      const { result, event } = await confirmCheckInAction(code, people);
+      setPhase({ kind: "result", result, event, code });
     });
   }
 
@@ -334,7 +321,7 @@ export function Scanner({
 
     setManualError(null);
     startTransition(async () => {
-      const found = await resolveShortCodeAction(eventId, code);
+      const found = await resolveShortCodeAction(code);
       if ("error" in found) {
         setManualError(found.error);
         return;
@@ -382,7 +369,7 @@ export function Scanner({
                 onClick={retryCamera}
                 className="rounded-xl border border-border px-4 py-2 text-sm font-medium"
               >
-                Si no arranca, tocá acá
+                Reintentar
               </button>
             </div>
           ) : (
@@ -405,7 +392,11 @@ export function Scanner({
 
       {/* Resultado */}
       {phase.kind === "result" ? (
-        <ResultStamp result={phase.result} eventName={eventName}>
+        <ResultStamp
+          result={phase.result}
+          eventName={phase.event?.name ?? null}
+          spaceName={phase.event?.spaceName ?? null}
+        >
           {phase.result.result === "ALLOWED" ? (
             <div className="flex flex-col gap-3">
               <p className="text-sm font-medium">¿Cuántas personas ingresan?</p>
@@ -552,10 +543,10 @@ export function Scanner({
           {/* El puesto lo define quien arma el evento. Acá solo se informa:
               antes se escribía en cada teléfono, y alcanzaba con un typo para
               que el historial mostrara dos puertas donde había una. */}
-          {stationLabel ? (
+          {stations.length > 0 ? (
             <p className="flex items-center gap-2 text-sm text-muted">
               <DoorOpen size={15} className="shrink-0" />
-              Estás en <span className="font-medium">{stationLabel}</span>
+              Estás en <span className="font-medium">{stations.join(" · ")}</span>
             </p>
           ) : null}
         </div>

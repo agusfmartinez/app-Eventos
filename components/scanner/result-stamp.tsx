@@ -74,10 +74,14 @@ function headline(result: CheckInResult): string {
 export function ResultStamp({
   result,
   eventName,
+  spaceName,
   children,
 }: {
   result: CheckInResult;
-  eventName: string;
+  /** Evento que resolvió el QR. Null cuando el token no existe. */
+  eventName: string | null;
+  /** Sub-salón del evento: a dónde hay que mandar al invitado. */
+  spaceName: string | null;
   children?: React.ReactNode;
 }) {
   const tone = stampToneFor(result);
@@ -98,6 +102,22 @@ export function ResultStamp({
 
       {"guestName" in result && result.guestName ? (
         <p className="mt-3 text-xl font-semibold">{result.guestName}</p>
+      ) : null}
+
+      {/* El evento lo resuelve el QR, así que hay que decir cuál salió: el
+          operador no lo eligió y puede haber dos fiestas la misma noche. */}
+      {eventName && result.result !== "WRONG_EVENT" ? (
+        <p className="mt-1 text-sm opacity-90">Evento: {eventName}</p>
+      ) : null}
+
+      {/* A dónde mandarlo. Solo cuando pasa: al que no entra no le sirve saber
+          el salón, y en un rechazo lo único que tiene que resaltar es el
+          rechazo. Va en caja aparte porque es la frase que el operador dice en
+          voz alta con la persona enfrente. */}
+      {spaceName && (result.result === "OK" || result.result === "ALLOWED") ? (
+        <p className="mt-3 rounded-xl bg-white/20 px-4 py-2 text-lg font-bold">
+          {spaceName}
+        </p>
       ) : null}
 
       <div className="mt-2 text-base opacity-95">
@@ -144,8 +164,9 @@ export function ResultStamp({
           <>
             <p>Pertenece a:</p>
             <p className="font-bold">{result.eventName}</p>
-            <p className="mt-2">Evento actual:</p>
-            <p className="font-bold">{eventName}</p>
+            <p className="mt-2">
+              Ese evento no está entre los que podés atender ahora.
+            </p>
           </>
         ) : null}
 

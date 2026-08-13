@@ -128,6 +128,29 @@ Adminer (inspección de la base): <http://localhost:8080>
   base como última red. **Nunca modificar `enteredCount` fuera de
   `confirmCheckIn`.** Si tocás ese archivo, corré `npm run test:concurrencia`.
 
+- **El operador no elige evento: lo resuelve el QR.** Y por eso la
+  autorización dejó de ser "¿podés abrir esta pantalla?" para pasar a ser
+  "¿este token es de un evento abierto ahora que vos podés atender?". Esa
+  pregunta la contesta `scannableEventIds` en
+  [`lib/scanning.ts`](lib/scanning.ts), y **toda acción del scanner la vuelve a
+  hacer**: son endpoints invocables sin pasar por ninguna página.
+
+- **"Hoy" para la puerta es la jornada del salón, de 08:00 a 08:00.** Una
+  fiesta del 15 que termina 05:00 del 16 sigue abierta a las 03:00 del 16.
+  Filtrar por `event_date = CURRENT_DATE` dejaría al operador sin escanear
+  justo en la madrugada, que es cuando más gente sale y vuelve a entrar. Lo
+  resuelve `currentVenueDay` en [`lib/schedule.ts`](lib/schedule.ts), y hay un
+  test con hora fija que lo verifica en los dos sentidos.
+
+- **El código corto puede repetirse entre eventos.** Solo es único dentro de
+  uno, así que con dos fiestas la misma noche el respaldo manual puede
+  empatar. Cuando pasa se avisa y se pide el QR, en vez de elegir uno:
+  registrar el ingreso de otra persona sería peor que la molestia.
+
+- **`/control/[eventId]` es de solo lectura.** Existe para el caso de "yo
+  tendría que estar en la lista": recepción busca a la persona y ve su estado.
+  No hay ninguna acción ahí, y el rol `DOOR` sigue sin poder abrir el panel.
+
 - **El puesto ("Puerta 1") lo define quien arma el evento, no quien escanea.**
   Sale de `event_staff.station_label` y la pantalla de recepción solo lo
   informa. Antes se escribía en cada teléfono y se guardaba en `localStorage`:

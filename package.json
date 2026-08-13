@@ -13,7 +13,7 @@
     "test:eventos": "tsx scripts/smoke-eventos.ts",
     "test:invitaciones": "tsx scripts/smoke-invitaciones.ts",
     "test:concurrencia": "tsx --conditions=react-server scripts/smoke-concurrencia.ts",
-    "test:scanner": "tsx scripts/smoke-scanner.ts",
+    "test:scanner": "tsx --conditions=react-server scripts/smoke-scanner.ts",
     "test:reportes": "tsx scripts/smoke-reportes.ts",
     "test:espacios": "tsx --conditions=react-server scripts/smoke-espacios.ts",
     "test:calendario": "tsx --conditions=react-server scripts/smoke-calendario.ts",

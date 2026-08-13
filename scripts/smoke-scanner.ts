@@ -1,19 +1,22 @@
 /**
- * Smoke test del control de acceso: rutas y permisos del rol DOOR.
+ * Smoke test del control de acceso: escaneo libre, ventana horaria y permisos.
  *
  *   npm run test:scanner   (requiere el server corriendo)
  *
- * La concurrencia se prueba aparte, en test:concurrencia. Acá lo que importa
- * es el aislamiento: un operador de puerta no debe poder entrar al panel ni
- * operar sobre eventos que no le asignaron.
+ * La concurrencia se prueba aparte, en test:concurrencia. Acá importan dos
+ * cosas: que el QR resuelva el evento correcto —y solo entre los que están
+ * abiertos ahora— y que recepción no pueda tocar nada.
  */
 import "dotenv/config";
 
 import { hash } from "@node-rs/argon2";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+import type { CurrentUser } from "../lib/authz";
+import { lookupInvitationAmong } from "../lib/checkin";
 import { PrismaClient } from "../lib/generated/prisma/client";
 import { Role } from "../lib/generated/prisma/enums";
+import { listScannableEvents } from "../lib/scanning";
 import { generateInvitationToken, generateShortCode } from "../lib/tokens";
 
 const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000";
@@ -28,6 +31,24 @@ const prisma = new PrismaClient({
 const results: { name: string; pass: boolean; detail: string }[] = [];
 const check = (name: string, pass: boolean, detail = "") =>
   results.push({ name, pass, detail });
+
+// ---------- fechas ----------
+
+/** El salón está en UTC-3 todo el año: no hay horario de verano desde 2009. */
+const VENUE_OFFSET_H = 3;
+
+/** Columna DATE: Prisma la quiere a medianoche UTC. */
+function dateOnly(daysFromToday: number): Date {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + daysFromToday);
+  return d;
+}
+
+/** Instante real correspondiente a una hora del reloj del salón. */
+function venueTime(date: Date, hour: number, minute = 0): Date {
+  return new Date(date.getTime() + (hour + VENUE_OFFSET_H) * 3_600_000 + minute * 60_000);
+}
 
 // ---------- sesión ----------
 
@@ -73,11 +94,17 @@ function makeJar() {
 const locationOf = (res: Response) => res.headers.get("location") ?? "";
 
 async function run() {
+  const today = dateOnly(0);
+
   // --- datos ---
+  // Todos los eventos son de hoy: con el escaneo libre, la puerta solo
+  // atiende lo que está abierto ahora.
   const assigned = await prisma.event.create({
     data: {
       name: `${MARKER} Asignado`,
-      eventDate: new Date("2026-12-31T00:00:00.000Z"),
+      eventDate: today,
+      startTime: "21:00",
+      endTime: "05:00",
       status: "PUBLISHED",
     },
     select: { id: true },
@@ -86,18 +113,21 @@ async function run() {
   const foreign = await prisma.event.create({
     data: {
       name: `${MARKER} Ajeno`,
-      eventDate: new Date("2026-12-30T00:00:00.000Z"),
+      eventDate: today,
+      startTime: "21:00",
+      endTime: "05:00",
       status: "PUBLISHED",
     },
     select: { id: true },
   });
 
-  // Un borrador no debe aparecer en el selector de la puerta. Solo se
-  // comprueba por su nombre, así que no hace falta guardar el id.
-  await prisma.event.create({
+  // Un borrador no debe poder recibir gente aunque sea de hoy.
+  const draft = await prisma.event.create({
     data: {
       name: `${MARKER} Borrador`,
-      eventDate: new Date("2026-12-29T00:00:00.000Z"),
+      eventDate: today,
+      startTime: "21:00",
+      endTime: "05:00",
       status: "DRAFT",
     },
     select: { id: true },
@@ -115,9 +145,13 @@ async function run() {
     select: { id: true },
   });
 
-  await prisma.eventStaff.create({
-    data: { eventId: assigned.id, userId: door.id, stationLabel: "Puerta 1" },
-    select: { eventId: true },
+  await prisma.eventStaff.createMany({
+    data: [
+      { eventId: assigned.id, userId: door.id, stationLabel: "Puerta 1" },
+      // También al borrador: el filtro tiene que ser por estado, no solo por
+      // asignación.
+      { eventId: draft.id, userId: door.id, stationLabel: null },
+    ],
   });
 
   const guest = await prisma.guest.create({
@@ -125,16 +159,115 @@ async function run() {
     select: { id: true },
   });
 
+  const token = generateInvitationToken();
   await prisma.invitation.create({
     data: {
       guestId: guest.id,
       eventId: assigned.id,
-      token: generateInvitationToken(),
+      token,
       shortCode: generateShortCode(),
       maxPeople: 2,
     },
     select: { id: true },
   });
+
+  // Invitado del evento ajeno, para probar el rechazo del escaneo libre.
+  const foreignGuest = await prisma.guest.create({
+    data: { eventId: foreign.id, firstName: "Beto", lastName: `Ruiz${MARKER}` },
+    select: { id: true },
+  });
+
+  const foreignToken = generateInvitationToken();
+  await prisma.invitation.create({
+    data: {
+      guestId: foreignGuest.id,
+      eventId: foreign.id,
+      token: foreignToken,
+      shortCode: generateShortCode(),
+      maxPeople: 1,
+    },
+    select: { id: true },
+  });
+
+  // --- ventana de escaneo (sin HTTP: es lógica pura contra la base) ---
+
+  const doorUser: CurrentUser = {
+    id: door.id,
+    username: DOOR_USERNAME,
+    email: null,
+    firstName: "Operador",
+    lastName: MARKER,
+    fullName: `Operador ${MARKER}`,
+    role: Role.DOOR,
+    mustChangePassword: false,
+  };
+
+  const duringParty = await listScannableEvents(doorUser, venueTime(today, 23));
+  const names = duringParty.map((e) => e.name);
+
+  check(
+    "durante la fiesta, el operador ve el evento asignado",
+    names.includes(`${MARKER} Asignado`),
+    names.join(", "),
+  );
+  check(
+    "no ve eventos de otros operadores",
+    !names.includes(`${MARKER} Ajeno`),
+  );
+  check(
+    "un borrador no se puede escanear ni estando asignado",
+    !names.includes(`${MARKER} Borrador`),
+  );
+
+  // La trampa del ROADMAP: a las 03:00 del día siguiente la fiesta de anoche
+  // sigue en curso. Filtrar por event_date = hoy la dejaría afuera.
+  const atThreeAM = await listScannableEvents(
+    doorUser,
+    venueTime(dateOnly(1), 3),
+  );
+  check(
+    "a las 03:00 del día siguiente la fiesta de anoche sigue abierta",
+    atThreeAM.some((e) => e.name === `${MARKER} Asignado`),
+    atThreeAM.map((e) => e.name).join(", "),
+  );
+
+  // Y a las 10:00, con la fiesta terminada a las 05:00, ya no.
+  const nextMorning = await listScannableEvents(
+    doorUser,
+    venueTime(dateOnly(1), 10),
+  );
+  check(
+    "a la mañana siguiente el evento ya no se puede escanear",
+    !nextMorning.some((e) => e.name === `${MARKER} Asignado`),
+    nextMorning.map((e) => e.name).join(", "),
+  );
+
+  // --- el QR resuelve el evento ---
+
+  const allowed = new Set(duringParty.map((e) => e.id));
+
+  const ownScan = await lookupInvitationAmong(token, allowed);
+  check(
+    "el QR de un invitado propio queda autorizado",
+    ownScan.result.result === "ALLOWED" &&
+      ownScan.event?.id === assigned.id,
+    ownScan.result.result,
+  );
+
+  const foreignScan = await lookupInvitationAmong(foreignToken, allowed);
+  check(
+    "el QR de un evento que no atiende se rechaza y dice de cuál es",
+    foreignScan.result.result === "WRONG_EVENT" &&
+      foreignScan.event?.name === `${MARKER} Ajeno`,
+    foreignScan.result.result,
+  );
+
+  const bogusScan = await lookupInvitationAmong("no-existe", allowed);
+  check(
+    "un código inexistente no resuelve ningún evento",
+    bogusScan.result.result === "NOT_FOUND" && bogusScan.event === null,
+    bogusScan.result.result,
+  );
 
   // --- sesión del operador de puerta ---
   const doorSession = makeJar();
@@ -166,33 +299,55 @@ async function run() {
     `location=${locationOf(res)}`,
   );
 
-  // 3. ve solo los eventos asignados y publicados
+  // 3. el escáner abre sin elegir evento
   res = await doorSession.req("/control");
   let html = await res.text();
   check(
-    "ve el evento al que está asignado",
+    "el control abre directo en el escáner",
+    res.status === 200 && html.includes("Apuntá al código QR"),
+    `status=${res.status}`,
+  );
+
+  // 4. la lista de eventos, en su propia pantalla y acotada al acceso
+  res = await doorSession.req("/control/eventos");
+  html = await res.text();
+  check(
+    "la lista muestra el evento asignado",
     res.status === 200 && html.includes(`${MARKER} Asignado`),
     `status=${res.status}`,
   );
   check(
-    "no ve eventos de otros operadores",
-    !html.includes(`${MARKER} Ajeno`),
+    "la lista no muestra eventos ajenos",
+    res.status === 200 && !html.includes(`${MARKER} Ajeno`),
+  );
+  check(
+    "la lista no muestra borradores",
+    res.status === 200 && !html.includes(`${MARKER} Borrador`),
   );
 
-  // 4. no puede escanear en un evento que no le asignaron
+  // 5. la ficha de un evento ajeno sigue cerrada
   res = await doorSession.req(`/control/${foreign.id}`);
   check(
-    "no puede abrir el scanner de un evento ajeno",
+    "no puede abrir la ficha de un evento ajeno",
     locationOf(res).includes("/sin-acceso"),
     `status=${res.status} location=${locationOf(res)}`,
   );
 
-  // 5. sí puede abrir el suyo
+  // 6. la del suyo se abre, en modo lectura
   res = await doorSession.req(`/control/${assigned.id}`);
+  html = await res.text();
   check(
-    "puede abrir el scanner de su evento",
+    "puede abrir la ficha de su evento",
     res.status === 200,
     `status=${res.status}`,
+  );
+  check(
+    "la ficha lista a los invitados para poder buscarlos",
+    res.status === 200 && html.includes(`Gomez${MARKER}`),
+  );
+  check(
+    "la ficha avisa que es de solo lectura",
+    res.status === 200 && html.includes("solo lectura"),
   );
 
   // --- sesión del admin ---
@@ -202,30 +357,25 @@ async function run() {
     process.env.SEED_ADMIN_PASSWORD ?? "admin1234",
   );
 
-  res = await adminSession.req("/control");
+  res = await adminSession.req("/control/eventos");
   html = await res.text();
   check(
-    "el admin ve todos los eventos publicados",
+    "el admin ve todos los eventos",
     html.includes(`${MARKER} Asignado`) && html.includes(`${MARKER} Ajeno`),
-  );
-  check(
-    "el selector no ofrece eventos en borrador",
-    !html.includes(`${MARKER} Borrador`),
-    "un borrador no debería aparecer en la puerta",
   );
 
   res = await adminSession.req(`/control/${foreign.id}`);
   check(
-    "el admin puede escanear en cualquier evento",
+    "el admin puede abrir la ficha de cualquier evento",
     res.status === 200,
     `status=${res.status}`,
   );
 
-  // 6. sin sesión no se llega al scanner
+  // 7. sin sesión no se llega al control
   const anon = makeJar();
-  res = await anon.req(`/control/${assigned.id}`);
+  res = await anon.req("/control");
   check(
-    "sin sesión, el scanner manda al login",
+    "sin sesión, el control manda al login",
     locationOf(res).includes("/login"),
     `location=${locationOf(res)}`,
   );

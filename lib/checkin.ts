@@ -78,7 +78,7 @@ const invitationSelect = {
   eventId: true,
   guestId: true,
   guest: { select: { firstName: true, lastName: true } },
-  event: { select: { name: true } },
+  event: { select: { name: true, space: { select: { name: true } } } },
 } as const;
 
 type InvitationForCheckIn = {
@@ -87,7 +87,7 @@ type InvitationForCheckIn = {
   enteredCount: number;
   eventId: string;
   guest: { firstName: string; lastName: string };
-  event: { name: string };
+  event: { name: string; space: { name: string } | null };
 };
 
 /**
@@ -99,13 +99,17 @@ type InvitationForCheckIn = {
  */
 function evaluate(
   invitation: InvitationForCheckIn,
-  expectedEventId: string,
+  /**
+   * Qué eventos acepta este escaneo. Con evento fijo es uno solo; en el
+   * escaneo libre son los que están corriendo ahora y el operador alcanza.
+   */
+  accepts: (eventId: string) => boolean,
 ): Exclude<CheckInResult, { result: "OK" }> {
   const guestName = `${invitation.guest.firstName} ${invitation.guest.lastName}`;
 
   // El evento va primero: una invitación de otra fiesta no es "bloqueada",
   // es de otra fiesta, y el operador necesita ese mensaje concreto.
-  if (invitation.eventId !== expectedEventId) {
+  if (!accepts(invitation.eventId)) {
     return { result: "WRONG_EVENT", guestName, eventName: invitation.event.name };
   }
 
@@ -150,10 +154,42 @@ export async function lookupInvitation(
   code: string,
   eventId: string,
 ): Promise<CheckInResult> {
-  const invitation = await findByCode(code);
-  if (!invitation) return { result: "NOT_FOUND" };
-  return evaluate(invitation, eventId);
+  const { result } = await lookupInvitationAmong(code, new Set([eventId]));
+  return result;
 }
+
+/**
+ * Igual que `lookupInvitation`, pero contra varios eventos, y además devuelve
+ * a cuál pertenece el token.
+ *
+ * Es la consulta del escaneo libre: el token ya identifica al evento, así que
+ * lo único que queda por decidir es si ese evento es uno de los que el
+ * operador puede atender ahora. El evento se devuelve incluso cuando el
+ * resultado es un rechazo — el operador necesita saber de qué fiesta era.
+ */
+export async function lookupInvitationAmong(
+  code: string,
+  eventIds: ReadonlySet<string>,
+): Promise<{ result: CheckInResult; event: ScannedEvent | null }> {
+  const invitation = await findByCode(code);
+  if (!invitation) return { result: { result: "NOT_FOUND" }, event: null };
+
+  return {
+    result: evaluate(invitation, (id) => eventIds.has(id)),
+    event: {
+      id: invitation.eventId,
+      name: invitation.event.name,
+      spaceName: invitation.event.space?.name ?? null,
+    },
+  };
+}
+
+export type ScannedEvent = {
+  id: string;
+  name: string;
+  /** Sub-salón del evento. Es a dónde hay que mandar al invitado. */
+  spaceName: string | null;
+};
 
 async function findByCode(code: string) {
   const trimmed = code.trim();
@@ -218,7 +254,7 @@ export async function confirmCheckIn({
         where: { id: locked.id },
         select: {
           guest: { select: { firstName: true, lastName: true } },
-          event: { select: { name: true } },
+          event: { select: { name: true, space: { select: { name: true } } } },
         },
       });
 
@@ -228,10 +264,10 @@ export async function confirmCheckIn({
         enteredCount: locked.entered_count,
         eventId: locked.event_id,
         guest: details?.guest ?? { firstName: "", lastName: "" },
-        event: details?.event ?? { name: "" },
+        event: details?.event ?? { name: "", space: null },
       };
 
-      const verdict = evaluate(invitation, eventId);
+      const verdict = evaluate(invitation, (id) => id === eventId);
       if (verdict.result !== "ALLOWED") return verdict;
 
       if (people > verdict.available) {
@@ -276,24 +312,5 @@ export async function confirmCheckIn({
   );
 }
 
-/**
- * Busca por código corto dentro de un evento. Respaldo para cuando el QR no
- * se puede escanear (pantalla rota, brillo bajo, captura recomprimida).
- *
- * Devuelve el token, para que el flujo de confirmación sea idéntico al del QR
- * y exista una sola ruta de registro.
- */
-export async function resolveShortCode(
-  shortCode: string,
-  eventId: string,
-): Promise<string | null> {
-  const normalized = shortCode.trim().toUpperCase();
-  if (!normalized) return null;
-
-  const invitation = await prisma.invitation.findUnique({
-    where: { eventId_shortCode: { eventId, shortCode: normalized } },
-    select: { token: true },
-  });
-
-  return invitation?.token ?? null;
-}
+// El respaldo por código corto vive en `lib/scanning.ts`: con el escaneo libre
+// hay que buscarlo entre varios eventos, porque solo es único dentro de uno.
