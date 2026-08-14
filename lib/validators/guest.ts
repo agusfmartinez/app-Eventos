@@ -27,6 +27,24 @@ export const guestInputSchema = z.object({
     .trim()
     .min(1, "Poné el apellido.")
     .max(80, "Máximo 80 caracteres."),
+  /**
+   * Opcional para la carga manual: el organizador casi nunca lo tiene. El
+   * formulario público sí lo exige, porque es con lo que la persona recupera
+   * su entrada.
+   */
+  document: z
+    .string()
+    .trim()
+    .nullable()
+    .transform((v) => {
+      if (v === null) return null;
+      const digits = digitsOnly(v);
+      return digits === "" ? null : digits;
+    })
+    .refine(
+      (v) => v === null || (v.length >= 6 && v.length <= 12),
+      "El DNI tiene que tener entre 6 y 12 dígitos, sin puntos.",
+    ),
   phone: z
     .string()
     .trim()
@@ -39,15 +57,6 @@ export const guestInputSchema = z.object({
     .refine(
       (v) => v === null || (v.length >= 6 && v.length <= 20),
       "El teléfono tiene que tener entre 6 y 20 dígitos.",
-    ),
-  email: z
-    .string()
-    .trim()
-    .nullable()
-    .transform((v) => (v === "" ? null : v))
-    .refine(
-      (v) => v === null || z.email().safeParse(v).success,
-      "Revisá el email.",
     ),
   notes: optionalText(500),
   maxPeople: z.coerce
@@ -64,8 +73,8 @@ export function guestInputFromFormData(formData: FormData) {
   return guestInputSchema.safeParse({
     firstName: formData.get("firstName") ?? "",
     lastName: formData.get("lastName") ?? "",
+    document: formData.get("document") ?? null,
     phone: formData.get("phone") ?? null,
-    email: formData.get("email") ?? null,
     notes: formData.get("notes") ?? null,
     maxPeople: formData.get("maxPeople") ?? 1,
     status: formData.get("status") ?? InvitationStatus.ENABLED,

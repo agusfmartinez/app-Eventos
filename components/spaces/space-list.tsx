@@ -16,6 +16,7 @@ export type SpaceRow = {
   id: string;
   name: string;
   capacity: number | null;
+  address: string | null;
   notes: string | null;
   active: boolean;
   eventCount: number;
@@ -47,7 +48,13 @@ function ToggleActive({ space }: { space: SpaceRow }) {
   );
 }
 
-function SpaceRowItem({ space }: { space: SpaceRow }) {
+function SpaceRowItem({
+  space,
+  venueAddress,
+}: {
+  space: SpaceRow;
+  venueAddress: string | null;
+}) {
   const [editing, setEditing] = useState(false);
 
   if (editing) {
@@ -56,9 +63,11 @@ function SpaceRowItem({ space }: { space: SpaceRow }) {
         <SpaceForm
           action={updateSpaceAction.bind(null, space.id)}
           submitLabel="Guardar cambios"
+          venueAddress={venueAddress}
           defaultValues={{
             name: space.name,
             capacity: space.capacity?.toString() ?? "",
+            address: space.address ?? "",
             notes: space.notes ?? "",
             active: space.active,
           }}
@@ -86,6 +95,7 @@ function SpaceRowItem({ space }: { space: SpaceRow }) {
         <p className="text-sm text-muted">
           {space.capacity ? `Capacidad: ${space.capacity} · ` : ""}
           {space.eventCount} {space.eventCount === 1 ? "evento" : "eventos"}
+          {space.address ? ` · ${space.address}` : ""}
           {space.notes ? ` · ${space.notes}` : ""}
         </p>
       </div>
@@ -100,7 +110,14 @@ function SpaceRowItem({ space }: { space: SpaceRow }) {
   );
 }
 
-export function SpaceList({ spaces }: { spaces: SpaceRow[] }) {
+export function SpaceList({
+  spaces,
+  venueAddress,
+}: {
+  spaces: SpaceRow[];
+  /** Dirección del despliegue, para mostrarla como referencia. */
+  venueAddress: string | null;
+}) {
   const [creating, setCreating] = useState(false);
 
   return (
@@ -112,6 +129,7 @@ export function SpaceList({ spaces }: { spaces: SpaceRow[] }) {
             action={createSpaceAction}
             submitLabel="Crear espacio"
             resetOnSuccess
+            venueAddress={venueAddress}
             cancel={
               <Button
                 type="button"
@@ -140,7 +158,11 @@ export function SpaceList({ spaces }: { spaces: SpaceRow[] }) {
       ) : (
         <Card className="divide-y divide-border">
           {spaces.map((space) => (
-            <SpaceRowItem key={space.id} space={space} />
+            <SpaceRowItem
+              key={space.id}
+              space={space}
+              venueAddress={venueAddress}
+            />
           ))}
         </Card>
       )}

@@ -42,9 +42,10 @@ export async function GET(
       select: {
         firstName: true,
         lastName: true,
+        document: true,
         phone: true,
-        email: true,
         notes: true,
+        viaRegistration: true,
         invitation: {
           select: {
             shortCode: true,
@@ -60,23 +61,25 @@ export async function GET(
       [
         "Nombre",
         "Apellido",
+        "DNI",
         "Telefono",
-        "Email",
         "Personas",
         "Ingresaron",
         "Estado",
         "Codigo",
+        "Origen",
         "Observaciones",
       ],
       guests.map((g) => [
         g.firstName,
         g.lastName,
+        g.document ?? "",
         g.phone ?? "",
-        g.email ?? "",
         g.invitation?.maxPeople ?? "",
         g.invitation?.enteredCount ?? "",
         g.invitation ? STATUS_LABELS[deriveStatus(g.invitation)] : "",
         g.invitation?.shortCode ?? "",
+        g.viaRegistration ? "Formulario" : "Carga manual",
         g.notes ?? "",
       ]),
     );

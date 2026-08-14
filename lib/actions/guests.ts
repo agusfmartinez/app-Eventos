@@ -14,6 +14,19 @@ import { InvitationStatus } from "@/lib/generated/prisma/enums";
 import { generateInvitationToken, generateShortCode } from "@/lib/tokens";
 import { guestInputFromFormData } from "@/lib/validators/guest";
 
+/**
+ * El DNI es único por evento: es lo que evita que la misma persona quede
+ * cargada dos veces, una por el formulario público y otra a mano.
+ */
+const DUPLICATE_DOCUMENT =
+  "Ya hay un invitado de este evento con ese DNI. Buscalo en la lista.";
+
+function isDuplicateDocument(error: unknown): boolean {
+  return (
+    error instanceof Error && error.message.includes("guests_event_id_document")
+  );
+}
+
 function refreshEvent(eventId: string) {
   revalidatePath("/panel");
   revalidatePath(`/panel/eventos/${eventId}`);
@@ -56,8 +69,8 @@ export async function createGuestAction(
             eventId,
             firstName: input.firstName,
             lastName: input.lastName,
+            document: input.document,
             phone: input.phone,
-            email: input.email,
             notes: input.notes,
           },
           select: { id: true },
@@ -93,6 +106,13 @@ export async function createGuestAction(
       const isCodeCollision =
         error instanceof Error && error.message.includes("short_code");
       if (isCodeCollision && attempt < 4) continue;
+
+      if (isDuplicateDocument(error)) {
+        return {
+          values: collectValues(formData),
+          fieldErrors: { document: DUPLICATE_DOCUMENT },
+        };
+      }
 
       console.error("createGuestAction", error);
       return { values: collectValues(formData), error: "No se pudo agregar el invitado. Intentá de nuevo." };
@@ -150,8 +170,8 @@ export async function updateGuestAction(
         data: {
           firstName: input.firstName,
           lastName: input.lastName,
+          document: input.document,
           phone: input.phone,
-          email: input.email,
           notes: input.notes,
         },
         select: { id: true },
@@ -178,6 +198,13 @@ export async function updateGuestAction(
       });
     });
   } catch (error) {
+    if (isDuplicateDocument(error)) {
+      return {
+        values: collectValues(formData),
+        fieldErrors: { document: DUPLICATE_DOCUMENT },
+      };
+    }
+
     console.error("updateGuestAction", error);
     return { values: collectValues(formData), error: "No se pudo guardar el invitado. Intentá de nuevo." };
   }

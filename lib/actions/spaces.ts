@@ -38,6 +38,7 @@ export async function createSpaceAction(
         data: {
           name: input.name,
           capacity: input.capacity,
+          address: input.address,
           notes: input.notes,
           active: input.active,
         },
@@ -83,6 +84,7 @@ export async function updateSpaceAction(
         data: {
           name: input.name,
           capacity: input.capacity,
+          address: input.address,
           notes: input.notes,
           active: input.active,
         },

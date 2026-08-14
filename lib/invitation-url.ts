@@ -18,6 +18,11 @@ export function invitationImageUrl(token: string): string {
   return `${appUrl()}/i/${token}/imagen`;
 }
 
+/** Formulario público de registro (Fase 10). Lo comparte el anfitrión. */
+export function registrationUrl(token: string): string {
+  return `${appUrl()}/r/${token}`;
+}
+
 /**
  * Link wa.me con el mensaje prearmado. El envío es manual: se abre WhatsApp
  * con el texto listo y la persona aprieta enviar. Automatizarlo requiere

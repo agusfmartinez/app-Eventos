@@ -96,6 +96,12 @@ model Space {
   name String @unique
   /// Capacidad física del ambiente. Propone el cupo por defecto del evento.
   capacity Int?
+  /// Dirección del ambiente.
+  ///
+  /// Vacía en el caso normal —un solo salón, la dirección viene del despliegue
+  /// (`VENUE_ADDRESS`)— y cargada cuando el cliente tiene varias sedes y cada
+  /// espacio está en otro lado. Ver lib/venue.ts.
+  address  String?
   notes    String?
   /// Los espacios no se borran: se desactivan. Borrarlos dejaría eventos
   /// pasados sin ambiente y rompería el historial.
@@ -140,6 +146,24 @@ model Event {
   /// Es un acuerdo comercial, no un límite físico exacto: la aplicación avisa
   /// cuando se supera, pero no bloquea el alta de invitados.
   maxGuests Int? @map("max_guests")
+
+  /// Formulario público de registro (Fase 10).
+  ///
+  /// El token es un portador: quien lo tenga puede registrarse. Por eso los
+  /// controles reales no son "quién lo recibió" sino el cupo, la fecha límite
+  /// y poder cerrarlo. Nullable porque el formulario se genera cuando se
+  /// necesita, no en cada evento.
+  registrationToken    String?   @unique @map("registration_token")
+  registrationOpen     Boolean   @default(false) @map("registration_open")
+  /// Último día en que se puede registrar. Inclusive.
+  registrationDeadline DateTime? @map("registration_deadline") @db.Date
+  /// Personas que puede anotar cada invitado, contándose. Arranca en 1: que
+  /// sumar acompañantes sea una decisión explícita del salón.
+  registrationMaxPeople Int      @default(1) @map("registration_max_people")
+  /// Con auto-aprobación la invitación nace habilitada y la persona se lleva
+  /// el QR en el momento. Apagarlo la deja en PENDING para que alguien la
+  /// revise.
+  registrationAutoApprove Boolean @default(true) @map("registration_auto_approve")
 
   createdById String?  @map("created_by") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -190,6 +214,14 @@ model Guest {
   email     String?
   notes     String?
 
+  /// DNI, solo dígitos. Lo pide el formulario público: es con lo que la
+  /// persona recupera su entrada si perdió el link, y lo que evita que se
+  /// anote dos veces.
+  document String? @db.VarChar(20)
+
+  /// Se registró solo por el formulario público, no lo cargó el salón.
+  viaRegistration Boolean @default(false) @map("via_registration")
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -197,6 +229,7 @@ model Guest {
   invitation Invitation?
   checkIns   CheckIn[]
 
+  @@unique([eventId, document])
   @@index([eventId, lastName, firstName])
   @@index([eventId, phone])
   @@map("guests")

@@ -10,7 +10,9 @@ export type FinderGuest = {
   id: string;
   firstName: string;
   lastName: string;
+  document: string | null;
   phone: string | null;
+  notes: string | null;
   invitation: {
     status: InvitationStatus;
     maxPeople: number;
@@ -40,7 +42,12 @@ export function GuestFinder({ guests }: { guests: FinderGuest[] }) {
       guests.map((guest) => ({
         guest,
         haystack: normalize(`${guest.firstName} ${guest.lastName}`),
-        phone: (guest.phone ?? "").replace(/\D/g, ""),
+        // El DNI entra en la misma búsqueda numérica que el teléfono: en la
+        // puerta, lo que la persona tiene a mano es el documento.
+        numbers: [guest.phone, guest.document]
+          .filter(Boolean)
+          .join(" ")
+          .replace(/[^\d ]/g, ""),
       })),
     [guests],
   );
@@ -52,7 +59,7 @@ export function GuestFinder({ guests }: { guests: FinderGuest[] }) {
     ? indexed.filter(
         (row) =>
           row.haystack.includes(needle) ||
-          (digits.length >= 3 && row.phone.includes(digits)),
+          (digits.length >= 3 && row.numbers.includes(digits)),
       )
     : indexed;
 
@@ -66,7 +73,7 @@ export function GuestFinder({ guests }: { guests: FinderGuest[] }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nombre o teléfono"
+          placeholder="Buscar por nombre, DNI o teléfono"
           aria-label="Buscar invitados"
           autoComplete="off"
           className="w-full rounded-xl border border-border bg-surface py-3 pr-16 pl-9 text-base outline-none focus:border-brand"
@@ -114,7 +121,16 @@ export function GuestFinder({ guests }: { guests: FinderGuest[] }) {
                   <p className="truncate text-sm font-medium">
                     {guest.lastName}, {guest.firstName}
                   </p>
-                  <p className="text-xs text-muted">{formatPhone(guest.phone)}</p>
+                  <p className="text-xs text-muted">
+                    {guest.document ? `DNI ${guest.document}` : "sin DNI"}
+                    {guest.phone ? ` · ${formatPhone(guest.phone)}` : ""}
+                  </p>
+                  {/* Las observaciones son para la puerta: "viene en silla de
+                      ruedas", "llega tarde", "mesa 4". Escritas en el panel y
+                      leídas acá, que es donde alguien las necesita. */}
+                  {guest.notes ? (
+                    <p className="mt-0.5 text-xs text-warn">{guest.notes}</p>
+                  ) : null}
                 </div>
                 <GuestState invitation={guest.invitation} />
               </li>

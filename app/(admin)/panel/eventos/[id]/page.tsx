@@ -11,6 +11,7 @@ import {
 
 import { DraftBanner } from "@/components/events/draft-banner";
 import { EventDashboard } from "@/components/events/event-dashboard";
+import { EventRegistrationPanel } from "@/components/events/event-registration-panel";
 import { EventStaffPanel } from "@/components/events/event-staff-panel";
 import {
   CapacityWarning,
@@ -29,12 +30,14 @@ import {
   formatEventDate,
   formatPhone,
   personFullName,
+  toDateInputValue,
 } from "@/lib/format";
 import {
   deriveStatus,
   STATUS_LABELS,
   STATUS_TONES,
 } from "@/lib/invitation-status";
+import { registrationUrl } from "@/lib/invitation-url";
 import { findScheduleConflicts } from "@/lib/schedule";
 import { listAssignableStaff, listEventStaff } from "@/lib/staff";
 import { getEventStats, getHourlyEntries } from "@/lib/stats";
@@ -68,6 +71,12 @@ export default async function EventoPage({
       spaceId: true,
       maxGuests: true,
       space: { select: { name: true } },
+      registrationToken: true,
+      registrationOpen: true,
+      registrationAutoApprove: true,
+      registrationMaxPeople: true,
+      registrationDeadline: true,
+      _count: { select: { guests: { where: { viaRegistration: true } } } },
     },
   });
 
@@ -92,7 +101,11 @@ export default async function EventoPage({
         OR: [
           { firstName: { contains: query, mode: "insensitive" as const } },
           { lastName: { contains: query, mode: "insensitive" as const } },
-          ...(digits ? [{ phone: { contains: digits } }] : []),
+          // El DNI se busca igual que el teléfono: los dos son dígitos y el
+          // organizador puede tener a mano cualquiera de los dos.
+          ...(digits
+            ? [{ phone: { contains: digits } }, { document: { contains: digits } }]
+            : []),
         ],
       }
     : { eventId: id };
@@ -106,7 +119,10 @@ export default async function EventoPage({
         id: true,
         firstName: true,
         lastName: true,
+        document: true,
         phone: true,
+        notes: true,
+        viaRegistration: true,
         invitation: {
           select: {
             status: true,
@@ -206,6 +222,24 @@ export default async function EventoPage({
         candidates={staffCandidates}
       />
 
+      <EventRegistrationPanel
+        eventId={event.id}
+        settings={{
+          capacity: event.maxGuests,
+          authorized: stats.capacity,
+          open: event.registrationOpen,
+          autoApprove: event.registrationAutoApprove,
+          maxPeople: event.registrationMaxPeople,
+          deadline: event.registrationDeadline
+            ? toDateInputValue(event.registrationDeadline)
+            : "",
+          url: event.registrationToken
+            ? registrationUrl(event.registrationToken)
+            : null,
+          registered: event._count.guests,
+        }}
+      />
+
       <section className="flex flex-col gap-3">
         <AddGuestPanel
           action={createGuestAction.bind(null, event.id)}
@@ -254,16 +288,27 @@ export default async function EventoPage({
                   className="flex flex-wrap items-center gap-3 p-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/panel/eventos/${event.id}/invitados/${guest.id}`}
-                      className="font-medium hover:text-brand"
-                    >
-                      {personFullName(guest)}
-                    </Link>
+                    <p className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/panel/eventos/${event.id}/invitados/${guest.id}`}
+                        className="font-medium hover:text-brand"
+                      >
+                        {personFullName(guest)}
+                      </Link>
+                      {/* Saber quién se anotó solo importa: es el que nadie
+                          del salón revisó. */}
+                      {guest.viaRegistration ? (
+                        <Badge tone="neutral">Formulario</Badge>
+                      ) : null}
+                    </p>
                     <p className="text-sm text-muted">
+                      {guest.document ? `DNI ${guest.document} · ` : ""}
                       {formatPhone(guest.phone)}
                       {inv ? ` · código ${inv.shortCode}` : ""}
                     </p>
+                    {guest.notes ? (
+                      <p className="mt-0.5 text-xs text-warn">{guest.notes}</p>
+                    ) : null}
                   </div>
 
                   {inv ? (

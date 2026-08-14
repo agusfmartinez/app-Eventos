@@ -128,6 +128,41 @@ Adminer (inspección de la base): <http://localhost:8080>
   base como última red. **Nunca modificar `enteredCount` fuera de
   `confirmCheckIn`.** Si tocás ese archivo, corré `npm run test:concurrencia`.
 
+- **La dirección se resuelve en cadena: evento → espacio → despliegue.**
+  Está en [`lib/venue.ts`](lib/venue.ts). El caso normal es cargar
+  `VENUE_ADDRESS` una vez en el `.env` y no completar nada más; `space.address`
+  solo se usa cuando el cliente tiene varias sedes, y `event.location` es la
+  excepción (un catering afuera). Escribirla en cada evento era repetir un dato
+  que no cambia, y cualquier typo terminaba impreso en la invitación.
+
+  Ojo con la diferencia: la **capacidad** sí vive en el espacio, porque varía
+  entre ambientes. La dirección, no.
+
+- **El link del formulario de registro es un portador.** Quien lo tenga puede
+  anotarse, lo haya recibido del anfitrión o de un reenvío; repartirlo con
+  cuidado no es un control de acceso. Los controles reales son el **cupo del
+  evento**, las **personas permitidas por invitado** (arranca en 1), la
+  **fecha límite**, poder
+  **cerrarlo** y poder **bloquear la invitación** después. El botón "Generar
+  otro" corta el link viejo sin tocar a quienes ya se registraron.
+
+- **El cupo se cuenta en personas, y es el único tope del formulario.** Hubo
+  un "tope de registros" que contaba formularios completados: se sacó porque
+  medía la unidad equivocada. Con cupo 150, saber que se anotaron 40 no dice
+  nada — pueden ser 40 personas o 160. Lo que ocupa lugar son las sillas.
+
+- **En el formulario público el cupo bloquea; en el panel solo avisa.** No es
+  una inconsistencia: el organizador tiene contexto para pasarse por dos
+  personas a las 11 de la noche, un formulario público no tiene ninguno. Y se
+  verifica dentro de una transacción con `FOR UPDATE` sobre el evento, por el
+  mismo motivo que el check-in: cuando el link cae en un grupo de WhatsApp,
+  varios se anotan en el mismo segundo.
+
+- **La entrada se recupera con DNI *y* apellido.** Con el DNI solo,
+  `/mi-entrada` sería un buscador de entradas ajenas: alcanzaría con probar
+  documentos. Y cuando no encuentra contesta siempre lo mismo, sin decir cuál
+  de los dos datos falló.
+
 - **El operador no elige evento: lo resuelve el QR.** Y por eso la
   autorización dejó de ser "¿podés abrir esta pantalla?" para pasar a ser
   "¿este token es de un evento abierto ahora que vos podés atender?". Esa

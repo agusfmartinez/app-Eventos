@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-import { GuestForm } from "@/components/guests/guest-form";
+import { GuestDetails } from "@/components/guests/guest-details";
 import { InvitationCard } from "@/components/invitations/invitation-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge, Card, PageHeader } from "@/components/ui/misc";
@@ -9,6 +9,7 @@ import { updateGuestAction } from "@/lib/actions/guests";
 import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { formatDateTime, personFullName } from "@/lib/format";
+import { InvitationStatus } from "@/lib/generated/prisma/enums";
 import {
   deriveStatus,
   STATUS_LABELS,
@@ -33,9 +34,10 @@ export default async function InvitadoPage({
       id: true,
       firstName: true,
       lastName: true,
+      document: true,
       phone: true,
-      email: true,
       notes: true,
+      viaRegistration: true,
       createdAt: true,
       event: {
         select: {
@@ -44,6 +46,7 @@ export default async function InvitadoPage({
           eventDate: true,
           startTime: true,
           location: true,
+          space: { select: { address: true } },
         },
       },
       invitation: {
@@ -110,21 +113,20 @@ export default async function InvitadoPage({
         />
       ) : null}
 
-      <Card className="p-5">
-        <GuestForm
-          action={updateGuestAction.bind(null, guest.id)}
-          submitLabel="Guardar cambios"
-          defaultValues={{
-            firstName: guest.firstName,
-            lastName: guest.lastName,
-            phone: guest.phone ?? "",
-            email: guest.email ?? "",
-            notes: guest.notes ?? "",
-            maxPeople: inv?.maxPeople ?? 1,
-            status: inv?.status,
-          }}
-        />
-      </Card>
+      <GuestDetails
+        action={updateGuestAction.bind(null, guest.id)}
+        viaRegistration={guest.viaRegistration}
+        hasInvitation={inv !== null}
+        values={{
+          firstName: guest.firstName,
+          lastName: guest.lastName,
+          document: guest.document ?? "",
+          phone: guest.phone ?? "",
+          notes: guest.notes ?? "",
+          maxPeople: inv?.maxPeople ?? 1,
+          status: inv?.status ?? InvitationStatus.ENABLED,
+        }}
+      />
 
       <section className="flex flex-col gap-3">
         <h2 className="font-semibold">Historial de ingresos</h2>

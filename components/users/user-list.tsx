@@ -166,7 +166,7 @@ function UserRowItem({
           {user.mustChangePassword ? (
             <Badge tone="warn">Clave temporal</Badge>
           ) : null}
-          {isSelf ? <Badge tone="neutral">Vos</Badge> : null}
+          {isSelf ? <Badge tone="neutral">Yo</Badge> : null}
         </p>
         <p className="text-sm text-muted">
           {user.email ?? "sin email"}

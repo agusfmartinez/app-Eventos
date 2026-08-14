@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
  */
 export function GuestSearch({
   defaultValue = "",
-  placeholder = "Buscar por nombre o teléfono",
+  placeholder = "Buscar...",
   className,
   inputClassName,
 }: {

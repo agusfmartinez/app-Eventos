@@ -4,8 +4,10 @@ import {
   CalendarDays,
   CalendarRange,
   DoorOpen,
+  ExternalLink,
   LogOut,
   ScanLine,
+  Ticket,
   Users,
 } from "lucide-react";
 
@@ -28,11 +30,17 @@ export default async function AdminLayout({
     <div className="flex min-h-full flex-1 flex-col">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-4 py-3">
-          <Link href="/panel" className="font-semibold">
+          <Link
+            href="/panel"
+            className="shrink-0 font-semibold whitespace-nowrap"
+          >
             Salón de Eventos
           </Link>
 
-          <nav className="flex items-center gap-1 text-sm">
+          {/* Solo las secciones del panel. Los accesos que no son secciones
+              —la pantalla pública, el tema, la sesión— viven a la derecha:
+              mezclarlos hacía que la fila se partiera en dos renglones. */}
+          <nav className="flex min-w-0 items-center gap-0.5 text-sm [&_a]:whitespace-nowrap">
             <Link
               href="/panel"
               className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-muted hover:bg-background hover:text-foreground"
@@ -72,16 +80,35 @@ export default async function AdminLayout({
             </Link>
           </nav>
 
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-sm text-muted sm:inline">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <span className="mr-2 hidden text-sm whitespace-nowrap text-muted lg:inline">
               {user.fullName}
             </span>
+
+            {/* Pantalla pública: se abre aparte para no perder el panel, y
+                sobre todo para poder copiar el link y pasárselo a alguien que
+                perdió su entrada. */}
+            <a
+              href="/mi-entrada"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Abrir la pantalla pública para recuperar una entrada"
+              title="Pantalla pública para que un invitado recupere su entrada"
+              className="relative flex items-center rounded-md p-2 text-muted hover:bg-background hover:text-foreground"
+            >
+              <Ticket size={16} />
+              <ExternalLink
+                size={10}
+                className="absolute top-1 right-0.5 opacity-70"
+              />
+            </a>
+
             <ThemeToggle />
             <form action={logoutAction}>
               <button
                 type="submit"
                 aria-label="Cerrar sesión"
-                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted hover:bg-background hover:text-foreground"
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm whitespace-nowrap text-muted hover:bg-background hover:text-foreground"
               >
                 <LogOut size={16} />
                 <span className="hidden sm:inline">Salir</span>

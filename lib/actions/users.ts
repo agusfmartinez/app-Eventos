@@ -168,7 +168,7 @@ export async function updateUserAction(
     return {
       values: collectValues(formData),
       error:
-        "No podés quitarte a vos mismo el rol de administrador. Pedíselo a otro administrador.",
+        "No podés quitarte el rol de administrador. Pedíselo a otro administrador.",
     };
   }
 

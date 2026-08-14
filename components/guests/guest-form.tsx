@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,8 @@ import { InvitationStatus } from "@/lib/generated/prisma/enums";
 export type GuestFormValues = {
   firstName: string;
   lastName: string;
+  document: string;
   phone: string;
-  email: string;
   notes: string;
   maxPeople: number;
   status: InvitationStatus;
@@ -21,8 +21,8 @@ export type GuestFormValues = {
 const emptyValues: GuestFormValues = {
   firstName: "",
   lastName: "",
+  document: "",
   phone: "",
-  email: "",
   notes: "",
   maxPeople: 1,
   status: InvitationStatus.ENABLED,
@@ -51,15 +51,25 @@ export function GuestForm({
   submitLabel = "Guardar",
   cancel,
   resetOnSuccess = false,
+  onSuccess,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   defaultValues?: Partial<GuestFormValues>;
   submitLabel?: string;
   cancel?: React.ReactNode;
   resetOnSuccess?: boolean;
+  /** Se llama cuando la acción termina bien. El padre decide qué sigue. */
+  onSuccess?: () => void;
 }) {
   const [state, formAction] = useActionState(action, emptyFormState);
   const err = state.fieldErrors ?? {};
+
+  // El estado es un objeto nuevo por envío, así que esto corre una vez por
+  // guardado exitoso y no en cada render.
+  useEffect(() => {
+    if (state.ok) onSuccess?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   // React 19 resetea el formulario al terminar la acción: sin reponer lo
   // enviado, un error de validación borraría toda la carga del invitado.
@@ -101,6 +111,21 @@ export function GuestForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
+          label="DNI"
+          htmlFor="document"
+          error={err.document}
+          hint="Opcional acá. Quien se registra por el formulario público sí lo carga."
+        >
+          <Input
+            id="document"
+            name="document"
+            inputMode="numeric"
+            defaultValue={v.document}
+            error={err.document}
+          />
+        </Field>
+
+        <Field
           label="Teléfono"
           htmlFor="phone"
           error={err.phone}
@@ -114,16 +139,6 @@ export function GuestForm({
             defaultValue={v.phone}
             error={err.phone}
             placeholder=""
-          />
-        </Field>
-
-        <Field label="Email" htmlFor="email" error={err.email}>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            defaultValue={v.email}
-            error={err.email}
           />
         </Field>
       </div>

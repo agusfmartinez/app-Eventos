@@ -59,7 +59,9 @@ export default async function ControlEventoPage({
         id: true,
         firstName: true,
         lastName: true,
+        document: true,
         phone: true,
+        notes: true,
         invitation: {
           select: { status: true, maxPeople: true, enteredCount: true },
         },

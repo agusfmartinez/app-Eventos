@@ -6,6 +6,7 @@ import { InvitationStatus } from "@/lib/generated/prisma/enums";
 import { invitationUrl } from "@/lib/invitation-url";
 import { qrPngDataUrl } from "@/lib/qr";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { resolveLocation } from "@/lib/venue";
 
 /**
  * Imagen de la invitación, para descargar y mandar por WhatsApp.
@@ -55,6 +56,7 @@ export async function GET(
           endTime: true,
           location: true,
           status: true,
+          space: { select: { address: true } },
         },
       },
     },
@@ -71,6 +73,7 @@ export async function GET(
   }
 
   const { event, guest } = invitation;
+  const address = resolveLocation(event);
   const qr = await qrPngDataUrl(invitationUrl(token), 460);
 
   const timeLabel = event.startTime
@@ -145,9 +148,9 @@ export async function GET(
             </div>
           ) : null}
 
-          {event.location ? (
+          {address ? (
             <div style={{ fontSize: 30, color: "#6b6b76", marginTop: 8 }}>
-              {event.location}
+              {address}
             </div>
           ) : null}
 

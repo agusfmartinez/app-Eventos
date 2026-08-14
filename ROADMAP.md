@@ -21,9 +21,9 @@ que todavía no están construidas.
 | 7. Calendario de disponibilidad | ✅ hecha |
 | 8. Usuarios y asignación de recepción | ✅ hecha |
 | 9. Escaneo sin elegir evento | ✅ hecha |
+| 10. Formulario público de registro | ✅ hecha |
 
-Lo que queda son los dos pedidos más grandes: el formulario público de registro
-(10) y WhatsApp Business API (11).
+Queda WhatsApp Business API (11), que era opcional desde el principio.
 
 ---
 
@@ -183,6 +183,21 @@ existe el personal del salón— y es bastante más trabajo.
 Dejar la aprobación como configurable ("auto-aprobar registros") es razonable,
 pero el valor por defecto tiene que ser el seguro.
 
+### Lo que se construyó, y en qué se apartó de este análisis
+
+**Se eligió auto-aprobar por defecto**, al revés de lo que proponía este
+documento. El motivo del cliente es sólido: el cupo del evento bloquea de
+verdad, la invitación se puede bloquear después, y en la puerta el control
+sigue existiendo. A cambio, la persona se lleva el QR en el momento y nadie
+tiene que repartir nada — que era el problema que el formulario venía a
+resolver. La aprobación manual quedó como interruptor por evento
+(`registration_auto_approve`), así que volver atrás no requiere código.
+
+El resto salió como estaba planeado: topes, fecha límite, cierre, deduplicado
+—por DNI en vez de por teléfono, que además sirve para recuperar la entrada— y
+límite por IP. Se sumó `/mi-entrada`, que no estaba en el análisis: sin mailing,
+alguien que pierde el link no tenía ninguna forma de recuperarlo.
+
 ### Otros riesgos concretos
 
 | Riesgo | Mitigación |
@@ -300,7 +315,7 @@ Esfuerzo: medio. Es la que **destraba el punto A**.
 | ✅ **7** | Calendario de disponibilidad (**D**) | medio | **Hecha.** Vista mes y vista día por espacio, con ventana anclada a las 08:00 |
 | ✅ **8** | Usuarios y asignación de recepción (**E**) | medio | **Hecha.** ABM de cuentas solo para admins, asignación por evento con puesto |
 | ✅ **9** | Escaneo sin elegir evento (**A**) | medio | **Hecha.** El QR resuelve el evento; la ventana es la jornada del salón, no el día calendario. La ficha por evento quedó como vista de solo lectura para recepción |
-| **10** | Formulario de registro de invitados (**C**) | medio-alto | Lo más grande y lo único que abre escritura al público |
+| ✅ **10** | Formulario de registro de invitados (**C**) | medio-alto | **Hecha.** Con auto-aprobación: la persona se lleva el QR en el momento. El cupo del evento bloquea, hay tope por registro, fecha límite y recuperación de la entrada por DNI |
 | **11** | WhatsApp Business API | medio | Como estaba: opcional |
 
 > **Consecuencia de descartar el CSV:** hasta que exista el formulario de

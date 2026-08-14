@@ -237,7 +237,12 @@ export function EventForm({
         Ver disponibilidad de esa fecha
       </button>
 
-      <Field label="Dirección" htmlFor="location" error={err.location}>
+      <Field
+        label="Dirección"
+        htmlFor="location"
+        error={err.location}
+        hint="Solo si este evento es fuera del salón. Vacío usa la del espacio, o la del salón."
+      >
         <Input
           id="location"
           name="location"

@@ -15,6 +15,16 @@ export const spaceInputSchema = z.object({
       (v) => v === null || (Number.isInteger(v) && v > 0 && v <= 100_000),
       "La capacidad tiene que ser un número entero mayor a cero.",
     ),
+  /**
+   * Solo para clientes con varias sedes. Vacía, la dirección sale de la
+   * configuración del despliegue (`VENUE_ADDRESS`).
+   */
+  address: z
+    .string()
+    .trim()
+    .max(200, "Máximo 200 caracteres.")
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
   notes: z
     .string()
     .trim()
@@ -30,6 +40,7 @@ export function spaceInputFromFormData(formData: FormData) {
   return spaceInputSchema.safeParse({
     name: formData.get("name") ?? "",
     capacity: formData.get("capacity") ?? null,
+    address: formData.get("address") ?? null,
     notes: formData.get("notes") ?? null,
     // Un checkbox sin marcar no se envía: su ausencia significa false.
     active: formData.get("active") === "on",

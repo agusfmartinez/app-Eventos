@@ -10,6 +10,7 @@ import { emptyFormState, type FormState } from "@/lib/form-state";
 export type SpaceFormValues = {
   name: string;
   capacity: string;
+  address: string;
   notes: string;
   active: boolean;
 };
@@ -17,6 +18,7 @@ export type SpaceFormValues = {
 const emptyValues: SpaceFormValues = {
   name: "",
   capacity: "",
+  address: "",
   notes: "",
   active: true,
 };
@@ -36,12 +38,15 @@ export function SpaceForm({
   submitLabel = "Guardar",
   cancel,
   resetOnSuccess = false,
+  venueAddress,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   defaultValues?: Partial<SpaceFormValues>;
   submitLabel?: string;
   cancel?: React.ReactNode;
   resetOnSuccess?: boolean;
+  /** Dirección del despliegue: la que se usa si este campo queda vacío. */
+  venueAddress?: string | null;
 }) {
   const [state, formAction] = useActionState(action, emptyFormState);
   const err = state.fieldErrors ?? {};
@@ -55,6 +60,7 @@ export function SpaceForm({
       ? {
           name: sent.name ?? "",
           capacity: sent.capacity ?? "",
+          address: sent.address ?? "",
           notes: sent.notes ?? "",
           // Un checkbox desmarcado no viaja en el FormData: si hubo envío, su
           // ausencia significa "desmarcado", no "usar el valor por defecto".
@@ -81,10 +87,10 @@ export function SpaceForm({
         </Field>
 
         <Field
-          label="Capacidad"
+          label="Capacidad máxima"
           htmlFor="capacity"
           error={err.capacity}
-          hint="Cuántas personas entran. Propone el cupo de los eventos."
+          hint=""
         >
           <Input
             id="capacity"
@@ -97,6 +103,25 @@ export function SpaceForm({
           />
         </Field>
       </div>
+
+      <Field
+        label="Dirección"
+        htmlFor="address"
+        error={err.address}
+        hint=""
+      >
+        {/* Se precarga la dirección del salón como valor y no como
+            placeholder: así se puede leer, corregir y guardar sin tener que
+            copiarla a mano. La contra es que al guardar queda escrita en el
+            espacio, y desde ese momento cambiar VENUE_ADDRESS no la actualiza:
+            para volver a heredarla hay que vaciar el campo. */}
+        <Input
+          id="address"
+          name="address"
+          defaultValue={v.address || (venueAddress ?? "")}
+          error={err.address}
+        />
+      </Field>
 
       <Field label="Notas" htmlFor="notes" error={err.notes}>
         <Textarea

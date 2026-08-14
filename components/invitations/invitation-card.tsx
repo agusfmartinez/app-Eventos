@@ -13,6 +13,7 @@ import {
   whatsappLink,
 } from "@/lib/invitation-url";
 import { qrSvg } from "@/lib/qr";
+import { resolveLocation } from "@/lib/venue";
 
 export async function InvitationCard({
   guestId,
@@ -34,6 +35,7 @@ export async function InvitationCard({
     eventDate: Date;
     startTime: string | null;
     location: string | null;
+    space?: { address: string | null } | null;
   };
 }) {
   const url = invitationUrl(token);
@@ -45,7 +47,7 @@ export async function InvitationCard({
     eventName: event.name,
     dateLabel: formatEventDate(event.eventDate),
     timeLabel: event.startTime,
-    location: event.location,
+    location: resolveLocation(event),
     maxPeople,
     token,
   });

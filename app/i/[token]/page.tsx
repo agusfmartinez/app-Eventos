@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import type { Metadata } from "next";
+import { Download } from "lucide-react";
 
 import { prisma } from "@/lib/db";
 import { formatEventDate } from "@/lib/format";
@@ -7,6 +8,7 @@ import { InvitationStatus } from "@/lib/generated/prisma/enums";
 import { invitationUrl } from "@/lib/invitation-url";
 import { qrSvg } from "@/lib/qr";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { resolveLocation } from "@/lib/venue";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +89,7 @@ export default async function InvitacionPublicaPage({
           endTime: true,
           location: true,
           status: true,
+          space: { select: { address: true } },
         },
       },
     },
@@ -110,6 +113,7 @@ export default async function InvitacionPublicaPage({
   }
 
   const { event, guest } = invitation;
+  const address = resolveLocation(event);
   const svg = await qrSvg(invitationUrl(token));
 
   return (
@@ -135,9 +139,7 @@ export default async function InvitacionPublicaPage({
                 {event.endTime ? ` a ${event.endTime}` : ""} hs
               </p>
             ) : null}
-            {event.location ? (
-              <p className="text-muted">{event.location}</p>
-            ) : null}
+            {address ? <p className="text-muted">{address}</p> : null}
           </div>
 
           <p className="mt-4 inline-block rounded-full bg-background px-4 py-1.5 text-sm font-medium">
@@ -157,10 +159,22 @@ export default async function InvitacionPublicaPage({
           </p>
         </div>
 
-        <div className="border-t border-border bg-background px-6 py-4 text-center">
+        <div className="flex flex-col gap-3 border-t border-border bg-background px-6 py-4 text-center">
+          {/* Descarga la versión en PNG. En el celular queda en la galería, que
+              es donde la persona la va a buscar en la puerta si no tiene señal
+              para abrir el link. */}
+          <a
+            href={`/i/${token}/imagen`}
+            download={`entrada-${invitation.shortCode}.png`}
+            className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold"
+          >
+            <Download size={16} />
+            Descargar mi entrada
+          </a>
+
           <p className="text-xs text-muted">
-            Presentá esta pantalla al llegar. No hace falta instalar ninguna
-            aplicación.
+            Presentá esta pantalla o la imagen al llegar. No hace falta instalar
+            ninguna aplicación.
           </p>
         </div>
       </div>
