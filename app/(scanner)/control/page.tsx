@@ -1,7 +1,17 @@
 import Link from "next/link";
-import { CalendarDays, CalendarOff, LayoutDashboard, ScanLine } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarOff,
+  LayoutDashboard,
+  LogOut,
+  ScanLine,
+} from "lucide-react";
 
 import { Scanner } from "@/components/scanner/scanner";
+import {
+  headerButton,
+  ScannerHeader,
+} from "@/components/scanner/scanner-header";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logoutAction } from "@/lib/actions/session";
 import { requireAuth } from "@/lib/authz";
@@ -43,40 +53,38 @@ export default async function ControlPage() {
 
   return (
     <main className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
-        <div className="flex items-center gap-2">
-          <ScanLine size={20} className="text-brand" />
-          <span className="font-semibold">Control de acceso</span>
-        </div>
+      <ScannerHeader
+        title={
+          <>
+            <ScanLine size={18} className="shrink-0 text-brand" />
+            Control de acceso
+          </>
+        }
+      >
+        {/* La lista vive en su propia pantalla y no debajo de la cámara: con
+            el escaneo libre es una consulta ocasional, y ahí abajo solo
+            empujaba el sello fuera del viewport del celular. */}
+        <Link href="/control/eventos" className={headerButton()}>
+          <CalendarDays size={15} />
+          <span className="hidden sm:inline">Eventos</span>
+        </Link>
 
-        <div className="flex items-center gap-2">
-          {/* La lista vive en su propia pantalla y no debajo de la cámara: con
-              el escaneo libre es una consulta ocasional, y ahí abajo solo
-              empujaba el sello fuera del viewport del celular. */}
-          <Link
-            href="/control/eventos"
-            className="flex shrink-0 items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted"
-          >
-            <CalendarDays size={15} />
-            Eventos
+        {!isStaffOnly ? (
+          <Link href="/panel" className={headerButton()}>
+            <LayoutDashboard size={15} />
+            <span className="hidden sm:inline">Panel</span>
           </Link>
-          <ThemeToggle />
-          {!isStaffOnly ? (
-            <Link
-              href="/panel"
-              className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted"
-            >
-              <LayoutDashboard size={15} />
-              Panel
-            </Link>
-          ) : null}
-          <form action={logoutAction}>
-            <button type="submit" className="text-sm text-muted">
-              Salir
-            </button>
-          </form>
-        </div>
-      </header>
+        ) : null}
+
+        <ThemeToggle />
+
+        <form action={logoutAction}>
+          <button type="submit" className={headerButton()} aria-label="Salir">
+            <LogOut size={15} />
+            <span className="hidden sm:inline">Salir</span>
+          </button>
+        </form>
+      </ScannerHeader>
 
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-4">
         {events.length === 0 ? (

@@ -71,7 +71,6 @@ export default async function EditarEventoPage({
             eventDate: toDateInputValue(event.eventDate),
             startTime: event.startTime ?? "",
             endTime: event.endTime ?? "",
-            location: event.location ?? "",
             notes: event.notes ?? "",
             status: event.status,
           }}

@@ -118,17 +118,11 @@ export default async function RegistroPage({
             {form.location || form.spaceName ? (
               <p className="flex items-center gap-2">
                 <MapPin size={15} className="shrink-0" />
-                {[form.location, form.spaceName].filter(Boolean).join(" · ")}
+                {form.location}
               </p>
             ) : null}
           </div>
         </div>
-
-        {form.notes ? (
-          <p className="border-b border-border bg-background px-6 py-4 text-sm whitespace-pre-wrap">
-            {form.notes}
-          </p>
-        ) : null}
 
         <div className="px-6 py-6">
           <RegistrationForm

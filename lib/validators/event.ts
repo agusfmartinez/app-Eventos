@@ -36,7 +36,6 @@ export const eventInputSchema = z.object({
     .regex(DATE_RE, "Elegí una fecha válida."),
   startTime: optionalTime,
   endTime: optionalTime,
-  location: optionalText(200),
   notes: optionalText(2000),
   status: z.enum(EventStatus),
   spaceId: z
@@ -74,7 +73,6 @@ export function eventInputFromFormData(formData: FormData) {
     eventDate: formData.get("eventDate") ?? "",
     startTime: formData.get("startTime") ?? null,
     endTime: formData.get("endTime") ?? null,
-    location: formData.get("location") ?? null,
     notes: formData.get("notes") ?? null,
     status: formData.get("status") ?? EventStatus.DRAFT,
     spaceId: formData.get("spaceId") ?? null,

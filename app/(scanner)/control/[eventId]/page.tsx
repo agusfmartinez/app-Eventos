@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, LayoutDashboard } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
 
 import { GuestFinder } from "@/components/scanner/guest-finder";
+import {
+  headerButton,
+  ScannerHeader,
+} from "@/components/scanner/scanner-header";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { requireEventAccess } from "@/lib/authz";
 import { prisma } from "@/lib/db";
@@ -71,37 +75,28 @@ export default async function ControlEventoPage({
 
   return (
     <main className="flex flex-1 flex-col">
-      <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3">
-        <Link
-          href="/control"
-          aria-label="Volver al escáner"
-          className="flex shrink-0 items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted"
-        >
-          <ArrowLeft size={15} />
-        </Link>
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{event.name}</p>
-          <p className="text-xs text-muted">
+      <ScannerHeader
+        backHref="/control"
+        backLabel="Volver al escáner"
+        title={event.name}
+        subtitle={
+          <>
             {formatEventDateShort(event.eventDate)}
             {event.startTime ? ` · ${event.startTime} hs` : ""}
             {event.space ? ` · ${event.space.name}` : ""}
             {station ? ` · ${station}` : ""}
-          </p>
-        </div>
-
-        <ThemeToggle />
-
+          </>
+        }
+      >
         {canManage ? (
-          <Link
-            href={`/panel/eventos/${event.id}`}
-            className="flex shrink-0 items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted"
-          >
+          <Link href={`/panel/eventos/${event.id}`} className={headerButton()}>
             <LayoutDashboard size={15} />
-            Panel
+            <span className="hidden sm:inline">Panel</span>
           </Link>
         ) : null}
-      </header>
+
+        <ThemeToggle />
+      </ScannerHeader>
 
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 p-4">
         <div className="grid grid-cols-3 gap-2">

@@ -34,7 +34,6 @@ export type RegistrationForm = {
   endTime: string | null;
   location: string | null;
   spaceName: string | null;
-  notes: string | null;
   maxPeoplePerGuest: number;
   /** Lugares que todavía quedan, o null si el evento no tiene cupo. */
   remaining: number | null;
@@ -66,7 +65,9 @@ export async function getRegistrationForm(
       startTime: true,
       endTime: true,
       location: true,
-      notes: true,
+      // Las notas del evento NO se traen: son internas del salón ("el padre
+      // de la novia paga en efectivo") y esta pantalla la abre cualquiera que
+      // reciba el link.
       status: true,
       maxGuests: true,
       registrationOpen: true,
@@ -109,7 +110,6 @@ export async function getRegistrationForm(
       endTime: event.endTime,
       location: resolveLocation(event),
       spaceName: event.space?.name ?? null,
-      notes: event.notes,
       maxPeoplePerGuest: Math.min(
         event.registrationMaxPeople,
         remaining ?? event.registrationMaxPeople,

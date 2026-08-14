@@ -26,7 +26,6 @@ import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import {
   EVENT_STATUS_LABELS,
-  formatEventDate,
   formatPhone,
   personFullName,
   toDateInputValue,

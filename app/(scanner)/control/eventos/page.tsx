@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarOff, ChevronRight } from "lucide-react";
+import { CalendarOff, ChevronRight } from "lucide-react";
 
+import { ScannerHeader } from "@/components/scanner/scanner-header";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { requireAuth } from "@/lib/authz";
 import { EVENT_STATUS_LABELS, formatEventDateShort } from "@/lib/format";
@@ -22,19 +23,13 @@ export default async function ControlEventosPage() {
 
   return (
     <main className="flex flex-1 flex-col">
-      <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3">
-        <Link
-          href="/control"
-          aria-label="Volver al escáner"
-          className="flex shrink-0 items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted"
-        >
-          <ArrowLeft size={15} />
-        </Link>
-
-        <p className="min-w-0 flex-1 truncate font-semibold">Eventos</p>
-
+      <ScannerHeader
+        title="Eventos"
+        backHref="/control"
+        backLabel="Volver al escáner"
+      >
         <ThemeToggle />
-      </header>
+      </ScannerHeader>
 
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 p-4">
         {events.length === 0 ? (

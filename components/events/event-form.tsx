@@ -23,7 +23,6 @@ export type EventFormValues = {
   eventDate: string;
   startTime: string;
   endTime: string;
-  location: string;
   notes: string;
   status: EventStatus;
 };
@@ -35,7 +34,6 @@ const emptyValues: EventFormValues = {
   eventDate: "",
   startTime: "",
   endTime: "",
-  location: "",
   notes: "",
   status: EventStatus.DRAFT,
 };
@@ -237,20 +235,8 @@ export function EventForm({
         Ver disponibilidad de esa fecha
       </button>
 
-      <Field
-        label="Dirección"
-        htmlFor="location"
-        error={err.location}
-        hint="Solo si este evento es fuera del salón. Vacío usa la del espacio, o la del salón."
-      >
-        <Input
-          id="location"
-          name="location"
-          defaultValue={v.location}
-          error={err.location}
-          placeholder=""
-        />
-      </Field>
+      {/* No hay campo de dirección: sale del espacio, y si el espacio no tiene,
+          de la configuración del salón (VENUE_ADDRESS). Ver lib/venue.ts. */}
 
       <Field
         label="Información adicional"
