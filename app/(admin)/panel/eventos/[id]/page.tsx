@@ -5,12 +5,11 @@ import {
   History,
   Pencil,
   ScanLine,
-  StickyNote,
   Users,
 } from "lucide-react";
 
 import { DraftBanner } from "@/components/events/draft-banner";
-import { EventDashboard } from "@/components/events/event-dashboard";
+import { EventInfo } from "@/components/events/event-info";
 import { EventRegistrationPanel } from "@/components/events/event-registration-panel";
 import { EventStaffPanel } from "@/components/events/event-staff-panel";
 import {
@@ -38,9 +37,10 @@ import {
   STATUS_TONES,
 } from "@/lib/invitation-status";
 import { registrationUrl } from "@/lib/invitation-url";
+import { resolveLocation } from "@/lib/venue";
 import { findScheduleConflicts } from "@/lib/schedule";
 import { listAssignableStaff, listEventStaff } from "@/lib/staff";
-import { getEventStats, getHourlyEntries } from "@/lib/stats";
+import { getEventStats } from "@/lib/stats";
 import { digitsOnly } from "@/lib/validators/guest";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +70,7 @@ export default async function EventoPage({
       status: true,
       spaceId: true,
       maxGuests: true,
-      space: { select: { name: true } },
+      space: { select: { name: true, address: true } },
       registrationToken: true,
       registrationOpen: true,
       registrationAutoApprove: true,
@@ -110,8 +110,9 @@ export default async function EventoPage({
       }
     : { eventId: id };
 
-  // Las estadísticas son del evento completo, no del filtro de búsqueda.
-  const [guests, stats, hourly] = await Promise.all([
+  // Las estadísticas son del evento completo, no del filtro de búsqueda. El
+  // ritmo por hora ya no se consulta acá: vive en la pantalla de ingresos.
+  const [guests, stats] = await Promise.all([
     prisma.guest.findMany({
       where,
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
@@ -134,27 +135,20 @@ export default async function EventoPage({
       },
     }),
     getEventStats(id),
-    getHourlyEntries(id),
   ]);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title={event.name}
+        // Solo fecha y estado: el detalle completo se lee en la ficha de
+        // abajo, donde cada dato tiene su etiqueta. Apilado en el encabezado
+        // era una tira de texto separada por puntos.
         subtitle={
           <>
-            {event.space ? `${event.space.name} · ` : ""}
-            {formatEventDate(event.eventDate)}
-            {event.startTime ? ` · ${event.startTime}` : ""}
-            {event.endTime ? ` a ${event.endTime} hs` : event.startTime ? " hs" : ""}
-            {event.location ? ` · ${event.location}` : ""}
-            <span className="ml-2">
-              <Badge
-                tone={event.status === "CANCELLED" ? "deny" : "neutral"}
-              >
-                {EVENT_STATUS_LABELS[event.status]}
-              </Badge>
-            </span>
+            <Badge tone={event.status === "CANCELLED" ? "deny" : "neutral"}>
+              {EVENT_STATUS_LABELS[event.status]}
+            </Badge>
           </>
         }
         actions={
@@ -204,17 +198,19 @@ export default async function EventoPage({
         />
       ) : null}
 
-      {event.notes ? (
-        <Card className="p-4">
-          <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-            <StickyNote size={15} className="text-muted" />
-            Información adicional
-          </h2>
-          <p className="mt-1.5 text-sm whitespace-pre-wrap">{event.notes}</p>
-        </Card>
-      ) : null}
-
-      <EventDashboard stats={stats} hourly={hourly} />
+      <EventInfo
+        stats={stats}
+        event={{
+          eventDate: event.eventDate,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          spaceName: event.space?.name ?? null,
+          address: resolveLocation(event),
+          maxGuests: event.maxGuests,
+          status: event.status,
+          notes: event.notes,
+        }}
+      />
 
       <EventStaffPanel
         eventId={event.id}

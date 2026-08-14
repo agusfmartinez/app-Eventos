@@ -31,21 +31,6 @@ function ProgressBar({ entered, capacity }: { entered: number; capacity: number 
   );
 }
 
-function SectionTitle({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="mt-2">
-      <h2 className="text-sm font-semibold">{title}</h2>
-      <p className="text-xs text-muted">{description}</p>
-    </div>
-  );
-}
-
 /**
  * Ritmo de ingresos por hora.
  *
@@ -97,7 +82,15 @@ function HourlyChart({ buckets }: { buckets: HourlyBucket[] }) {
   );
 }
 
-export function EventDashboard({
+/**
+ * Cómo viene el ingreso: cuántos entraron, cuántos faltan y a qué ritmo.
+ *
+ * Vive en la pantalla de ingresos y no en la del evento porque es el mismo
+ * dato que el historial de abajo, leído de otra forma: separarlos obligaba a
+ * mirar dos pantallas durante la noche del evento, que es justo cuando nadie
+ * tiene tiempo de navegar.
+ */
+export function EventProgress({
   stats,
   hourly,
 }: {
@@ -106,11 +99,6 @@ export function EventDashboard({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <SectionTitle
-        title="Durante el evento"
-        description="Quién ya está adentro y quién falta. Se actualiza con cada escaneo en la puerta."
-      />
-
       <ProgressBar entered={stats.entered} capacity={stats.capacity} />
 
       <div className="grid grid-cols-3 gap-3">
@@ -124,18 +112,6 @@ export function EventDashboard({
       </div>
 
       <HourlyChart buckets={hourly} />
-
-      <SectionTitle
-        title="Antes del evento"
-        description="Cómo está armada la lista. Sirve para revisar que no queden invitados sin confirmar antes de la fecha."
-      />
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Invitados" value={stats.guests} />
-        <StatCard label="Habilitados" value={stats.enabled} />
-        <StatCard label="Sin confirmar" value={stats.pending} tone="warn" />
-        <StatCard label="Bloqueados" value={stats.blocked} tone="deny" />
-      </div>
     </div>
   );
 }

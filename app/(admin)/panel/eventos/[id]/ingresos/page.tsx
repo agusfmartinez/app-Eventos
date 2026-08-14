@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Download, Search, Ticket } from "lucide-react";
 
+import { EventProgress } from "@/components/events/event-dashboard";
 import { ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { Card, EmptyState, PageHeader } from "@/components/ui/misc";
 import { requireAdminOrOrganizer } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { formatDateTime, personFullName } from "@/lib/format";
+import { getEventStats, getHourlyEntries } from "@/lib/stats";
 import { digitsOnly } from "@/lib/validators/guest";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +54,7 @@ export default async function IngresosPage({
       : {}),
   };
 
-  const [checkIns, total, totals] = await Promise.all([
+  const [checkIns, total, totals, stats, hourly] = await Promise.all([
     prisma.checkIn.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -74,6 +76,8 @@ export default async function IngresosPage({
       _sum: { peopleCount: true },
       _count: true,
     }),
+    getEventStats(id),
+    getHourlyEntries(id),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -110,6 +114,11 @@ export default async function IngresosPage({
           </>
         }
       />
+
+      {/* Cómo viene la noche, arriba del historial: es el mismo dato leído de
+          otra forma, y tenerlo en dos pantallas obligaba a saltar entre ellas
+          justo cuando el evento está en curso. */}
+      <EventProgress stats={stats} hourly={hourly} />
 
       <form className="flex items-center gap-2">
         <div className="relative">

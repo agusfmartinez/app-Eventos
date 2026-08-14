@@ -1,5 +1,3 @@
-import { Plus } from "lucide-react";
-
 import { SpaceList } from "@/components/spaces/space-list";
 import { PageHeader } from "@/components/ui/misc";
 import { requireAdminOrOrganizer } from "@/lib/authz";

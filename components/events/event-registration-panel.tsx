@@ -74,7 +74,7 @@ export function EventRegistrationPanel({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-semibold">
           <Share2 size={16} className="text-muted" />
-          Registro de invitados
+          Formulario de invitación
         </h2>
         {settings.open ? (
           <Badge tone="ok">Abierto</Badge>
@@ -84,9 +84,7 @@ export function EventRegistrationPanel({
       </div>
 
       <p className="mt-1 text-sm text-muted">
-        Un link que el anfitrión reparte para que sus invitados se anoten solos.
-        Cualquiera que lo reciba puede registrarse: lo que limita el ingreso es
-        el cupo del evento, las personas permitidas por invitado y la fecha.
+        Un formulario que el anfitrión reparte a sus invitados para que confirmen su asistencia.
       </p>
 
       {/* El cupo es lo que cierra el formulario, así que va acá y no solo en
