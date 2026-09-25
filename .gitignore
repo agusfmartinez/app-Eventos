@@ -48,6 +48,8 @@ next-env.d.ts
 
 # documentacion interna
 ANALISIS.md
+PRODUCTO.md
+DESPLIEGUE.md
 
 # config local de Claude Code (por maquina, no del proyecto)
 /.claude/settings.local.json

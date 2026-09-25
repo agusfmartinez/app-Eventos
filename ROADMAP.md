@@ -5,6 +5,10 @@ que todavía no están construidas.
 
 > El análisis técnico completo (arquitectura, modelo de datos, decisiones)
 > está en `ANALISIS.md`, que **no se commitea** — figura en `.gitignore`.
+>
+> Lo comercial y lo legal —precio, VPS, dominio, monotributo, licencias y datos
+> personales— está en [`PRODUCTO.md`](PRODUCTO.md). El armado del servidor
+> —DNS, certificados, redes y backups— en [`DESPLIEGUE.md`](DESPLIEGUE.md).
 
 ---
 

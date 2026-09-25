@@ -313,7 +313,8 @@ Adminer (inspección de la base): <http://localhost:8080>
 - [x] **Fase 6** — Espacios / sub-salones, cupo del evento y doble reserva
 - [x] **Fase 7** — Calendario de disponibilidad (vista mes y día)
 - [x] **Fase 8** — Usuarios, roles y asignación de recepción
-- [ ] Fase 9 — Escaneo sin elegir evento (ver `ROADMAP.md`)
-- [ ] Fase 6 — Importación CSV
-- [ ] Fase 7 — Roles y autorización estricta
-- [ ] Fase 8 — WhatsApp Business API (opcional)
+- [x] **Fase 9** — Escaneo sin elegir evento
+- [x] **Fase 10** — Formulario público de registro de invitados
+- [ ] Fase 11 — WhatsApp Business API (opcional)
+
+Detalle y backlog completo en [`ROADMAP.md`](ROADMAP.md).
