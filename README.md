@@ -3,6 +3,13 @@
 Aplicación para un salón de eventos: administrar eventos e invitados, generar
 invitaciones digitales con QR y controlar el ingreso desde un celular.
 
+## Capturas
+
+| | |
+|---|---|
+| <img src="capturas/cropped/02-dashboard-eventos.png" width="400"><br>Panel de eventos | <img src="capturas/cropped/09-invitacion-qr.png" width="400"><br>Invitación digital con QR |
+| <img src="capturas/cropped/14-scanner-ok.png" width="400"><br>Control de acceso en la puerta | <img src="capturas/cropped/07-calendario-mes.png" width="400"><br>Calendario de disponibilidad |
+
 ## Stack
 
 | Capa | Tecnología |
